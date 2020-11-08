@@ -10,6 +10,8 @@ This is useful if you need to run some process and would like to monitor the pro
 - elapsed time
 - estimated remaining time
 
+`yapm` uses syntax upto C++11.
+
 
 # Usage
 
