@@ -154,7 +154,7 @@ namespace pm
             if (!enable_speed_stats)
                 return;
 
-            const char *unit;
+            const char *unit = "Hz";
             double div = 1.;
             if (avgrate > 1e6)
                 unit = "MHz", div = 1.0e6;
