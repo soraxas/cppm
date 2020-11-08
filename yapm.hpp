@@ -80,10 +80,10 @@ namespace pm
         int n_old = 0;
         std::vector<double> deq_t;
         std::vector<int> deq_n;
-        int nupdates = 0;
-        int total_ = 0;
-        int cur_ = 0;
-        int period = 1;
+        size_t nupdates = 0;
+        size_t total_ = 0;
+        size_t cur_ = 0;
+        size_t period = 1;
         unsigned int smoothing = 50;
         bool use_ema = true;
         bool has_total_it = false;
@@ -335,7 +335,7 @@ namespace pm
             signal(SIGINT, flush_stdout);            // flush outfile when program is exiting
             signal(SIGWINCH, update_terminal_width); // flush outfile when program is exiting
         }
-        yapm(const int total) : yapm()
+        yapm(const ssize_t total) : yapm()
         {
             total_ = total;
             has_total_it = true;
