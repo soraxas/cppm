@@ -18,7 +18,7 @@
 #include <sys/ioctl.h> //ioctl() and TIOCGWINSZ
 #include <unistd.h>    // for STDOUT_FILENO
 
-namespace pm
+namespace yapm
 {
     unsigned int terminal_width = 80;
     FILE *outfile = stderr;
@@ -71,7 +71,7 @@ namespace pm
             r = vi, g = p, b = q;
     }
 
-    class yapm
+    class pm
     {
     protected:
         // time, iteration counters and deques for rate calculations
@@ -331,7 +331,7 @@ namespace pm
         }
 
     public:
-        yapm()
+        pm()
         {
             if (in_screen)
                 set_theme_basic(), color_transition = false;
@@ -342,13 +342,13 @@ namespace pm
             signal(SIGWINCH, update_terminal_width); // flush outfile when program is exiting
             _print_progress();
         }
-        yapm(const ssize_t total) : yapm()
+        pm(const ssize_t total) : pm()
         {
             total_ = total;
             has_total_it = true;
         }
         template <class T>
-        yapm &operator<<(const T &t)
+        pm &operator<<(const T &t)
         {
             suffix_ << t;
             return *this;
@@ -421,7 +421,7 @@ namespace pm
         }
     };
 
-    class yapm_timer : public yapm
+    class pm_timer : public pm
     {
     protected:
         double total_seconds_ = 0.;
@@ -441,9 +441,9 @@ namespace pm
         }
 
     public:
-        yapm_timer() = delete;
-        yapm_timer(const int seconds) : yapm_timer((double)seconds) {}
-        yapm_timer(const double seconds) : yapm(), total_seconds_(seconds)
+        pm_timer() = delete;
+        pm_timer(const int seconds) : pm_timer((double)seconds) {}
+        pm_timer(const double seconds) : pm(), total_seconds_(seconds)
         {
             print_bar = true;
         }
@@ -451,7 +451,7 @@ namespace pm
     };
 
     template <class It>
-    class IteratorProgressMonitor : public yapm
+    class IteratorProgressMonitor : public pm
     {
     public:
         IteratorProgressMonitor(It it, It it_end)
@@ -459,7 +459,7 @@ namespace pm
         {
         }
         IteratorProgressMonitor(It it, It it_end, int total)
-            : yapm(),
+            : pm(),
               iter_(std::move(it)),
               iter_begin_(iter_),
               iter_end_(std::move(it_end))
@@ -611,7 +611,7 @@ namespace pm
     };
 
     ///////////////////////////////////////////////////////////////
-    // public interface for accessing yapm as a wrapper iterator
+    // public interface for accessing pm as a wrapper iterator
     ///////////////////////////////////////////////////////////////
     template <class It>
     auto iter(const It &first, const It &last)
