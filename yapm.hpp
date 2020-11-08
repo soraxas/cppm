@@ -456,12 +456,10 @@ namespace yapm
     public:
         IteratorProgressMonitor(It it, It it_end)
             : IteratorProgressMonitor(it, it_end, std::distance(it, it_end))
-        {
-        }
+        {}
         IteratorProgressMonitor(It it, It it_end, int total)
             : pm(),
-              iter_(std::move(it)),
-              iter_begin_(iter_),
+              iter_begin_(std::move(it)),
               iter_end_(std::move(it_end))
         {
             total_ = total;
@@ -484,6 +482,8 @@ namespace yapm
             inline iterator &operator++()
             {
                 ++(iter_);
+                i++;
+                // std::cout << i << std::endl;
                 parent_.update();
                 return *this;
             }
@@ -491,6 +491,7 @@ namespace yapm
             {
                 auto retval = *this;
                 ++(*this);
+                parent_.update();
                 return retval;
             }
 
@@ -508,6 +509,7 @@ namespace yapm
                 return *iter_;
             }
 
+        int i = 0;
         private:
             IteratorProgressMonitor<It> &parent_;
             It &iter_;
@@ -522,12 +524,31 @@ namespace yapm
             return IteratorProgressMonitor<It>::iterator(*this, iter_end_);
         }
 
-    private:
-        It iter_;
+    protected:
         It iter_begin_;
         It iter_end_;
 
     }; // class iter
+
+    // progress monitor for rvalue, needed to take ownership of container
+    template <class Container>
+    class IteratorProgressMonitorForRvalue : public IteratorProgressMonitor<typename Container::const_iterator>
+    {
+        using It = typename Container::const_iterator;
+        public:
+            IteratorProgressMonitorForRvalue(const Container &&container)
+                : IteratorProgressMonitor<It>(container.begin(), container.end()),
+                  C(std::move(container))
+            {
+                // C = std::move(container);
+
+                // we need to reassign AGAIN because container is now invalid, and
+                // we need to assign the begin and end from `C`.
+                this->iter_begin_ = C.begin();
+                this->iter_end_ = C.end();
+            }
+        Container C;
+    };
 
 
     ///////////////////////////////////////////////////////////////
@@ -544,13 +565,7 @@ namespace yapm
                 : value(value_), step(step_) {}
             bool operator!=(RangeIterator const &other) const
             {
-                // return value != other.value;
-                // if (step > 0)
-                //     return value >= other.value;
-                // else
-                //     return value <= other.value;
                 return !(*this == other);
-                // return true;
             }
             bool operator==(RangeIterator const &other) const
             {
@@ -558,7 +573,6 @@ namespace yapm
                     return value >= other.value;
                 else
                     return value <= other.value;
-                
             }
             IntType const &operator*() const
             {
@@ -635,6 +649,12 @@ namespace yapm
     auto iter(const Container &C)
     {
         return iter(C.begin(), C.end());
+    }
+
+    template <class Container>
+    auto iter(const Container &&C)
+    {
+        return IteratorProgressMonitorForRvalue<Container>(std::move(C));
     }
 
     // create an implicit iterator, similar to tqdm.trange
