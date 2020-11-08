@@ -218,16 +218,22 @@ namespace pm
                 pbar_suf << " [", _format_speed(pbar_suf, __tmp_avgrate);
                 pbar_suf << "|", _format_simplify_time_(pbar_suf, __tmp_dt_tot);
                 pbar_suf << "<", _format_simplify_time_(pbar_suf, __tmp_remain_t);
-                pbar_suf << "]" << suffix;
+                pbar_suf << "]";
 
                 std::string pbar_suf_str = pbar_suf.str();
 
-                compute_pbar_size(pbar_pct_str.length() + pbar_suf_str.length() + 2);
+                compute_pbar_size(
+                    pbar_pct_str.length() + 
+                    pbar_suf_str.length() + 
+                    suffix.length() + 
+                    2);
                 _print_color(COLOR_RED);
                 fprintf(outfile, "%s", pbar_pct_str.c_str());
                 _print_bar();
                 _print_color(COLOR_BLUE);
                 fprintf(outfile, "%s", pbar_suf_str.c_str());
+                fprintf(outfile, COLOR_LIME);
+                fprintf(outfile, "%s", suffix.c_str());
             }
             else
             {
