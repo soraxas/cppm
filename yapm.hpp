@@ -88,9 +88,11 @@ namespace yapm
         bool use_ema = true;
         bool has_total_it = false;
         bool print_bar = false;
+        bool finished = false;
         float alpha_ema = 0.1;
         const float min_update_time = 0.15;
         std::stringstream suffix_;
+        std::string suffix;
 
         // short terminal_width = 80;
         std::vector<const char *> bars = {" ", "▏", "▎", "▍", "▌", "▋", "▊", "▉", "█"};
@@ -198,7 +200,7 @@ namespace yapm
         /////////////////////////////////////
         // internal output and house keeping
         /////////////////////////////////////
-        inline void _print_progress()
+        inline void _print_progress(bool last=false)
         {
             fprintf(outfile, "\015"); // clear line
             // label and pct
@@ -208,9 +210,11 @@ namespace yapm
             pbar_pct << label << std::fixed << std::setprecision(1) << std::setw(5) << std::setfill(' ') << __tmp_pct * 100 << "%";
             std::string pbar_pct_str = pbar_pct.str();
 
-            auto suffix = suffix_.str();
-            if (suffix.length() > 0)
-                suffix.insert(0, " ");
+            if (!last) {
+                suffix = suffix_.str();
+                if (suffix.length() > 0)
+                    suffix.insert(0, " ");
+            }
             if (has_total_it || print_bar)
             {
                 // percentage
@@ -240,11 +244,13 @@ namespace yapm
                 _print_color(COLOR_BLUE);
                 pbar_suf << "[", _format_speed(pbar_suf, __tmp_avgrate);
                 pbar_suf << "|", _format_simplify_time_(pbar_suf, __tmp_dt_tot);
-                pbar_suf << "]" << suffix;
+                pbar_suf << "]";
 
                 std::string pbar_suf_str = pbar_suf.str();
                 fprintf(outfile, "%4ldit %s", cur_,
                         pbar_suf_str.c_str());
+                fprintf(outfile, COLOR_LIME);
+                fprintf(outfile, "%s", suffix.c_str());
             }
 
             // finish printing
@@ -363,9 +369,12 @@ namespace yapm
             period = 1;
             nupdates = 0;
             total_ = 0;
+            cur_ = 0;
             has_total_it = false;
+            finished = false;
             label = "";
             update_terminal_width();
+            _internal_update_end();
         }
 
         ///////////////////////////////////////////////////////////////
@@ -412,9 +421,12 @@ namespace yapm
         }
         void finish()
         {
+            if (finished)
+                return;
+            finished = true;
             if (has_total_it)
                 cur_ = total_;
-            _print_progress();
+            _print_progress(true);
             // progress(total_,total_);
             fprintf(outfile, "\n");
             fflush(outfile);
@@ -465,6 +477,11 @@ namespace yapm
             total_ = total;
             has_total_it = true;
             _print_progress();
+        }
+        IteratorProgressMonitor(IteratorProgressMonitor &&) = default;
+        ~IteratorProgressMonitor() {
+            // finish bar when iterator is done.
+            finish();
         }
 
         struct iterator
@@ -523,6 +540,7 @@ namespace yapm
         {
             return IteratorProgressMonitor<It>::iterator(*this, iter_end_);
         }
+
 
     protected:
         It iter_begin_;
