@@ -334,13 +334,12 @@ namespace pm
             update_terminal_width();
             signal(SIGINT, flush_stdout);            // flush outfile when program is exiting
             signal(SIGWINCH, update_terminal_width); // flush outfile when program is exiting
+            _print_progress();
         }
         yapm(const ssize_t total) : yapm()
         {
             total_ = total;
             has_total_it = true;
-
-            // compute_pbar_size();
         }
         template <class T>
         yapm &operator<<(const T &t)
@@ -461,6 +460,7 @@ namespace pm
         {
             total_ = total;
             has_total_it = true;
+            _print_progress();
         }
 
         struct iterator
