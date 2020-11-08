@@ -21,11 +21,12 @@
 namespace pm
 {
     unsigned int terminal_width = 80;
+    FILE *outfile = stderr;
 
     void flush_stdout(int sig)
     { // can be called asynchronously
-        printf("\n");
-        fflush(stdout);
+        fprintf(outfile, "\n");
+        fflush(outfile);
         signal(sig, SIG_DFL);
         raise(sig);
     }
@@ -120,7 +121,7 @@ namespace pm
         inline void _print_color(const char *color)
         {
             if (use_colors)
-                printf(color);
+                fprintf(outfile, color);
         }
         inline void _print_bar()
         {
@@ -135,19 +136,19 @@ namespace pm
                     // red (hue=0) to green (hue=1/3)
                     int r = 255, g = 255, b = 255;
                     hsv_to_rgb(0.0 + pct / 3, 0.65, 1.0, r, g, b);
-                    printf("\033[38;2;%d;%d;%dm", r, g, b);
+                    fprintf(outfile, "\033[38;2;%d;%d;%dm", r, g, b);
                 }
                 else
-                    printf(COLOR_LIME);
+                    fprintf(outfile, COLOR_LIME);
             }
-            printf("%s", left_pad.c_str());
+            fprintf(outfile, "%s", left_pad.c_str());
             for (int i = 0; i < ifills; i++)
-                std::cout << bars[8];
+                fprintf(outfile, bars[8]);
             if (!in_screen and (pct < 1.0))
-                printf("%s", bars[(int)(8.0 * (fills - ifills))]);
+                fprintf(outfile, "%s", bars[(int)(8.0 * (fills - ifills))]);
             for (int i = 0; i < bar_width - ifills - 1; i++)
-                std::cout << bars[0];
-            printf("%s", right_pad.c_str());
+                fprintf(outfile, bars[0]);
+            fprintf(outfile, "%s", right_pad.c_str());
         }
         inline void _format_speed(std::ostringstream &oss, const double &avgrate)
         {
@@ -199,7 +200,7 @@ namespace pm
         /////////////////////////////////////
         inline void _print_progress()
         {
-            printf("\015"); // clear line
+            fprintf(outfile, "\015"); // clear line
             // label and pct
             std::ostringstream pbar_pct;
             std::ostringstream pbar_suf;
@@ -220,13 +221,13 @@ namespace pm
                 pbar_suf << "]" << suffix;
 
                 std::string pbar_suf_str = pbar_suf.str();
-
+                
                 compute_pbar_size(pbar_pct_str.length() + pbar_suf_str.length() + 2);
                 _print_color(COLOR_RED);
-                printf("%s", pbar_pct_str.c_str());
+                fprintf(outfile, "%s", pbar_pct_str.c_str());
                 _print_bar();
                 _print_color(COLOR_BLUE);
-                printf("%s", pbar_suf_str.c_str());
+                fprintf(outfile, "%s", pbar_suf_str.c_str());
             }
             else
             {
@@ -236,14 +237,14 @@ namespace pm
                 pbar_suf << "]" << suffix;
 
                 std::string pbar_suf_str = pbar_suf.str();
-                printf("%4dit %s", cur_,
+                fprintf(outfile, "%4ldit %s", cur_,
                        pbar_suf_str.c_str());
             }
 
             // finish printing
             _print_color(COLOR_RESET);
-            // if(!has_total_it || (total_ - cur_) > period) fflush(stdout);
-            fflush(stdout);
+            // if(!has_total_it || (total_ - cur_) > period) fflush(outfile);
+            fflush(outfile);
         }
         inline void _internal_update_end()
         {
@@ -306,7 +307,7 @@ namespace pm
                     __tmp_avgrate = dnsum / dtsum;
                 }
 
-                // learn an appropriate period length to avoid spamming stdout
+                // learn an appropriate period length to avoid spamming outfile
                 // and slowing down the loop, shoot for ~25Hz and smooth over 3 seconds
                 if (nupdates > 10)
                 {
@@ -331,8 +332,8 @@ namespace pm
             else if (in_tmux)
                 color_transition = false;
             update_terminal_width();
-            signal(SIGINT, flush_stdout);            // flush stdout when program is exiting
-            signal(SIGWINCH, update_terminal_width); // flush stdout when program is exiting
+            signal(SIGINT, flush_stdout);            // flush outfile when program is exiting
+            signal(SIGWINCH, update_terminal_width); // flush outfile when program is exiting
         }
         yapm(const int total) : yapm()
         {
@@ -410,8 +411,8 @@ namespace pm
                 cur_ = total_;
             _print_progress();
             // progress(total_,total_);
-            printf("\n");
-            fflush(stdout);
+            fprintf(outfile, "\n");
+            fflush(outfile);
         }
     };
 
