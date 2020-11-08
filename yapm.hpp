@@ -444,5 +444,104 @@ namespace pm
         }
         void progress(int curr, int tot) = delete;
     };
+
+    template <class It>
+    class IteratorProgressMonitor: public yapm
+    {
+    public:
+        IteratorProgressMonitor(It it, It it_end)
+            : IteratorProgressMonitor(it, it_end, std::distance(it, it_end))
+        {}
+        IteratorProgressMonitor(It it, It it_end, int total)
+            : yapm(),
+              iter_(std::move(it)),
+              iter_begin_(iter_),
+              iter_end_(std::move(it_end))
+        {
+            total_ = total;
+            has_total_it = true;
+        }
+
+        struct iterator
+        {
+            using iterator_category = typename It::iterator_category;
+            using value_type = typename It::value_type;
+            using difference_type = typename It::difference_type;
+            using pointer = typename It::pointer;
+            using reference = typename It::reference;
+
+        public:
+            iterator(IteratorProgressMonitor<It> &parent, It &inner_iter)
+                : parent_(parent), iter_(inner_iter) {}
+
+            inline iterator &operator++()
+            {
+                ++(iter_);
+                parent_.update();
+                return *this;
+            }
+            inline iterator operator++(int)
+            {
+                auto retval = *this;
+                ++(*this);
+                return retval;
+            }
+
+            inline bool operator==(const iterator &other) const
+            {
+                return iter_ == other.iter_;
+            }
+            inline bool operator!=(const iterator &other) const
+            {
+                return !(*this == other);
+            }
+
+            inline reference operator*() const
+            {
+                return *iter_;
+            }
+
+        private:
+            IteratorProgressMonitor<It> &parent_;
+            It &iter_;
+        };
+
+        inline iterator begin()
+        {
+            return IteratorProgressMonitor<It>::iterator(*this, iter_begin_);
+        }
+        inline iterator end()
+        {
+            return IteratorProgressMonitor<It>::iterator(*this, iter_end_);
+        }
+
+    private:
+        It iter_;
+        It iter_begin_;
+        It iter_end_;
+
+    }; // class iter
+
+    ///////////////////////////////////////////////////////////////
+    // public interface for accessing yapm as a wrapper iterator
+    ///////////////////////////////////////////////////////////////
+    template <class It>
+    auto iter(const It &first, const It &last)
+    {
+        return IteratorProgressMonitor<It>(first, last);
+    }
+
+    template <class It>
+    auto iter(const It &first, const It &last, size_t total)
+    {
+        return IteratorProgressMonitor<It>(first, last, total);
+    }
+
+    template <class Container>
+    auto iter(const Container &C)
+    {
+        return iter(C.begin(), C.end());
+    }
+
 }; // end namespace pm
 // #endif
