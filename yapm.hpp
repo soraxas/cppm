@@ -221,7 +221,7 @@ namespace pm
                 pbar_suf << "]" << suffix;
 
                 std::string pbar_suf_str = pbar_suf.str();
-                
+
                 compute_pbar_size(pbar_pct_str.length() + pbar_suf_str.length() + 2);
                 _print_color(COLOR_RED);
                 fprintf(outfile, "%s", pbar_pct_str.c_str());
@@ -238,7 +238,7 @@ namespace pm
 
                 std::string pbar_suf_str = pbar_suf.str();
                 fprintf(outfile, "%4ldit %s", cur_,
-                       pbar_suf_str.c_str());
+                        pbar_suf_str.c_str());
             }
 
             // finish printing
@@ -256,14 +256,14 @@ namespace pm
             {
                 __tmp_remain_t = (total_ - cur_) / __tmp_avgrate;
                 __tmp_pct = (double)cur_ / (total_);
-                // last small chunk of percentage.
-                if ((total_ - cur_) <= period)
-                {
-                    __tmp_pct = 1.;
-                    __tmp_avgrate = total_ / __tmp_dt_tot;
-                    // cur_ = total_;
-                    __tmp_remain_t = 0;
-                }
+                // // last small chunk of percentage.
+                // if ((total_ - cur_) <= period)
+                // {
+                //     __tmp_pct = 1.;
+                //     __tmp_avgrate = total_ / __tmp_dt_tot;
+                //     // cur_ = total_;
+                //     __tmp_remain_t = 0;
+                // }
             }
         }
         inline bool _internal_update()
@@ -446,12 +446,13 @@ namespace pm
     };
 
     template <class It>
-    class IteratorProgressMonitor: public yapm
+    class IteratorProgressMonitor : public yapm
     {
     public:
         IteratorProgressMonitor(It it, It it_end)
             : IteratorProgressMonitor(it, it_end, std::distance(it, it_end))
-        {}
+        {
+        }
         IteratorProgressMonitor(It it, It it_end, int total)
             : yapm(),
               iter_(std::move(it)),
@@ -464,10 +465,10 @@ namespace pm
 
         struct iterator
         {
-            using iterator_category = typename It::iterator_category;
-            using value_type = typename It::value_type;
-            using difference_type = typename It::difference_type;
-            using pointer = typename It::pointer;
+            // // using iterator_category = typename It::iterator_category;
+            // using value_type = typename It::value_type;
+            // // using difference_type = typename It::difference_type;
+            // using pointer = typename It::pointer;
             using reference = typename It::reference;
 
         public:
@@ -522,6 +523,87 @@ namespace pm
 
     }; // class iter
 
+
+    ///////////////////////////////////////////////////////////////
+    // Builtin range iterator
+    ///////////////////////////////////////////////////////////////
+
+    template <class IntType>
+    class RangeContainer
+    {
+        class RangeIterator
+        {
+        public:
+            RangeIterator(IntType value_, IntType step_)
+                : value(value_), step(step_) {}
+            bool operator!=(RangeIterator const &other) const
+            {
+                // return value != other.value;
+                // if (step > 0)
+                //     return value >= other.value;
+                // else
+                //     return value <= other.value;
+                return !(*this == other);
+                // return true;
+            }
+            bool operator==(RangeIterator const &other) const
+            {
+                if (step > 0)
+                    return value >= other.value;
+                else
+                    return value <= other.value;
+                
+            }
+            IntType const &operator*() const
+            {
+                return value;
+            }
+            RangeIterator &operator++()
+            {
+                // ++value;
+                value += step;
+                return *this;
+            }
+
+            typedef const IntType& reference;
+
+        private:
+            IntType value;
+            IntType step;
+        };
+    public:
+        RangeContainer(IntType from_, IntType to_, IntType step_)
+            : from(from_), to(to_), step(step_) {
+                if (step_ == 0)
+                    throw std::invalid_argument("step size must be non-zero");
+                if (from_ < to_ && step_ < 0)
+                    throw std::invalid_argument("step size must be positive if `from` is less than `to`!");
+                if (from_ > to_ && step_ > 0)
+                    throw std::invalid_argument("step size must be negative if `from` is larger than `to`!");
+            }
+
+        RangeContainer(IntType from_, IntType to_)
+            : RangeContainer(from_, to_, 1) {}
+
+        RangeContainer(IntType to_)
+            : RangeContainer(0, to_, 1) {}
+
+        RangeIterator begin() const
+        {
+            return RangeIterator(from, step);
+        }
+
+        RangeIterator end() const
+        {
+            return RangeIterator(to, -step);
+        }
+
+    private:
+        IntType const from;
+        IntType const to;
+        IntType const step;
+    };
+
     ///////////////////////////////////////////////////////////////
     // public interface for accessing yapm as a wrapper iterator
     ///////////////////////////////////////////////////////////////
@@ -532,7 +614,13 @@ namespace pm
     }
 
     template <class It>
-    auto iter(const It &first, const It &last, size_t total)
+    auto iter(const It &first, const It &last, const size_t total)
+    {
+        return IteratorProgressMonitor<It>(first, last, total);
+    }
+
+    template <class It>
+    auto iter(It &first, It &last, size_t total)
     {
         return IteratorProgressMonitor<It>(first, last, total);
     }
@@ -541,6 +629,33 @@ namespace pm
     auto iter(const Container &C)
     {
         return iter(C.begin(), C.end());
+    }
+
+    // create an implicit iterator, similar to tqdm.trange
+    template <class IntType>
+    auto range(IntType start, IntType end, IntType step = 1)
+    {
+        RangeContainer<IntType> rc(start, end, step);
+        IntType differences = (end-start);
+        size_t it_len = differences / step;
+        
+        // add one if there are any reminder.
+        IntType leap = it_len * step;
+        if (start < end) {
+            if (start + leap < end)
+                it_len += 1;
+        } else {
+            if (start + leap > end)
+                it_len += 1;
+        }
+
+        return iter(rc.begin(), rc.end(), it_len);
+    }
+
+    template <class IntType>
+    auto range(IntType end)
+    {
+        return range((IntType) 0, end, (IntType) 1);
     }
 
 }; // end namespace pm
