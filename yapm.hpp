@@ -379,7 +379,7 @@ namespace yapm {
         }
 
         ///////////////////////////////////////////////////////////////
-        void update() {
+        virtual void update() {
             /* Called to increment internal counter */
             ++cur_;
             if (_internal_update())
@@ -477,6 +477,11 @@ namespace yapm {
 
     template<class It>
     class IteratorProgressMonitor : public pm {
+    protected:
+        // update() should not be called directly on iterator wrapper
+        void update() {
+            pm::update();
+        }
     public:
         IteratorProgressMonitor(It it, It it_end)
                 : IteratorProgressMonitor(it, it_end, std::distance(it, it_end)) {}
