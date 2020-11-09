@@ -18,6 +18,8 @@
 #include <sys/ioctl.h> //ioctl() and TIOCGWINSZ
 #include <unistd.h>    // for STDOUT_FILENO
 
+#define UNUSED(x) (void)(x)
+
 namespace yapm {
     unsigned int terminal_width = 80;
     FILE *def_outfile = stderr;
@@ -29,7 +31,8 @@ namespace yapm {
         raise(sig);
     }
 
-    void update_terminal_width(int sig = -1) { // can be called asynchronously
+    void update_terminal_width(int sig=-1) { // can be called asynchronously
+        UNUSED(sig);
         struct winsize size;
         ioctl(STDOUT_FILENO, TIOCGWINSZ, &size);
         terminal_width = size.ws_col;
