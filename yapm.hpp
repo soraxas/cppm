@@ -20,11 +20,11 @@
 
 namespace yapm {
     unsigned int terminal_width = 80;
-    FILE *outfile = stderr;
+    FILE *def_outfile = stderr;
 
     void flush_stdout(int sig) { // can be called asynchronously
-        fprintf(outfile, "\n");
-        fflush(outfile);
+        fprintf(def_outfile, "\n");
+        fflush(def_outfile);
         signal(sig, SIG_DFL);
         raise(sig);
     }
@@ -87,6 +87,7 @@ namespace yapm {
         const float min_update_time = 0.15;
         std::stringstream suffix_;
         std::string suffix;
+        FILE* outfile_ = def_outfile;
 
         // short terminal_width = 80;
         std::vector<const char *> bars = {" ", "▏", "▎", "▍", "▌", "▋", "▊", "▉", "█"};
@@ -116,7 +117,7 @@ namespace yapm {
         /////////////////////////////////////
         inline void _print_color(const char *color) {
             if (use_colors)
-                fprintf(outfile, color);
+                fprintf(outfile_, "%s", color);
         }
 
         inline void _print_bar() {
@@ -129,18 +130,18 @@ namespace yapm {
                     // red (hue=0) to green (hue=1/3)
                     int r = 255, g = 255, b = 255;
                     hsv_to_rgb(0.0 + pct / 3, 0.65, 1.0, r, g, b);
-                    fprintf(outfile, "\033[38;2;%d;%d;%dm", r, g, b);
+                    fprintf(outfile_, "\033[38;2;%d;%d;%dm", r, g, b);
                 } else
-                    fprintf(outfile, COLOR_LIME);
+                    fprintf(outfile_, "%s", COLOR_LIME);
             }
-            fprintf(outfile, "%s", left_pad.c_str());
+            fprintf(outfile_, "%s", left_pad.c_str());
             for (int i = 0; i < ifills; i++)
-                fprintf(outfile, bars[8]);
+                fprintf(outfile_, "%s", bars[8]);
             if (!in_screen and (pct < 1.0))
-                fprintf(outfile, "%s", bars[(int) (8.0 * (fills - ifills))]);
+                fprintf(outfile_, "%s", bars[(int) (8.0 * (fills - ifills))]);
             for (int i = 0; i < bar_width - ifills - 1; i++)
-                fprintf(outfile, bars[0]);
-            fprintf(outfile, "%s", right_pad.c_str());
+                fprintf(outfile_, "%s", bars[0]);
+            fprintf(outfile_, "%s", right_pad.c_str());
         }
 
         inline void _format_speed(std::ostringstream &oss, const double &avgrate) {
@@ -189,7 +190,7 @@ namespace yapm {
         // internal output and house keeping
         /////////////////////////////////////
         inline void _print_progress(bool last = false) {
-            fprintf(outfile, "\015"); // clear line
+            fprintf(outfile_, "\015"); // clear line
             // label and pct
             std::ostringstream pbar_pct;
             std::ostringstream pbar_suf;
@@ -219,12 +220,12 @@ namespace yapm {
                         suffix.length() +
                         2);
                 _print_color(COLOR_RED);
-                fprintf(outfile, "%s", pbar_pct_str.c_str());
+                fprintf(outfile_, "%s", pbar_pct_str.c_str());
                 _print_bar();
                 _print_color(COLOR_BLUE);
-                fprintf(outfile, "%s", pbar_suf_str.c_str());
-                fprintf(outfile, COLOR_LIME);
-                fprintf(outfile, "%s", suffix.c_str());
+                fprintf(outfile_, "%s", pbar_suf_str.c_str());
+                fprintf(outfile_, "%s", COLOR_LIME);
+                fprintf(outfile_, "%s", suffix.c_str());
             } else {
                 _print_color(COLOR_BLUE);
                 pbar_suf << "[", _format_speed(pbar_suf, __tmp_avgrate);
@@ -232,16 +233,16 @@ namespace yapm {
                 pbar_suf << "]";
 
                 std::string pbar_suf_str = pbar_suf.str();
-                fprintf(outfile, "%4ldit %s", cur_,
+                fprintf(outfile_, "%4ldit %s", cur_,
                         pbar_suf_str.c_str());
-                fprintf(outfile, COLOR_LIME);
-                fprintf(outfile, "%s", suffix.c_str());
+                fprintf(outfile_, "%s", COLOR_LIME);
+                fprintf(outfile_, "%s", suffix.c_str());
             }
 
             // finish printing
             _print_color(COLOR_RESET);
-            // if(!has_total_it || (total_ - cur_) > period) fflush(outfile);
-            fflush(outfile);
+            // if(!has_total_it || (total_ - cur_) > period) fflush(outfile_);
+            fflush(outfile_);
         }
 
         inline void _internal_update_end() {
@@ -301,7 +302,7 @@ namespace yapm {
                     __tmp_avgrate = dnsum / dtsum;
                 }
 
-                // learn an appropriate period length to avoid spamming outfile
+                // learn an appropriate period length to avoid spamming outfile_
                 // and slowing down the loop, shoot for ~25Hz and smooth over 3 seconds
                 if (nupdates > 10) {
                     period = (int) (std::min(
@@ -326,15 +327,28 @@ namespace yapm {
                 color_transition = false;
             update_terminal_width();
             signal(SIGINT,
-                   flush_stdout);            // flush outfile when program is exiting
+                   flush_stdout);            // flush outfile_ when program is exiting
             signal(SIGWINCH,
-                   update_terminal_width); // flush outfile when program is exiting
+                   update_terminal_width); // flush outfile_ when program is exiting
             _print_progress();
         }
 
         pm(const ssize_t total) : pm() {
             total_ = total;
             has_total_it = true;
+        }
+
+        pm(pm &&) = default;
+
+        ~pm() {
+            if (outfile_ != def_outfile) {
+                fclose(outfile_);
+                outfile_ = def_outfile;
+            }
+        }
+
+        void setOutFilename(const char *filename) {
+            outfile_ = fopen(filename,"w");
         }
 
         template<class T>
@@ -356,6 +370,7 @@ namespace yapm {
             has_total_it = false;
             finished = false;
             label = "";
+            outfile_ = def_outfile;
             update_terminal_width();
             _internal_update_end();
         }
@@ -423,8 +438,8 @@ namespace yapm {
                 cur_ = total_;
             _print_progress(true);
             // progress(total_,total_);
-            fprintf(outfile, "\n");
-            fflush(outfile);
+            fprintf(outfile_, "\n");
+            fflush(outfile_);
         }
     };
 
