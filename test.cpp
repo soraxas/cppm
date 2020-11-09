@@ -17,6 +17,8 @@ int main() {
 
     std::cout << "Progress monitor without total:" << std::endl;
     yapm::pm bar1;
+    // if you want to output the progress monitor to some log file:
+    // bar1.setOutFilename("/tmp/yadm.log");
     for (int i = 0; i < N; i++)
     {
         usleep(.1);
