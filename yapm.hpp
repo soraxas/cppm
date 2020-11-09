@@ -18,21 +18,18 @@
 #include <sys/ioctl.h> //ioctl() and TIOCGWINSZ
 #include <unistd.h>    // for STDOUT_FILENO
 
-namespace yapm
-{
+namespace yapm {
     unsigned int terminal_width = 80;
     FILE *outfile = stderr;
 
-    void flush_stdout(int sig)
-    { // can be called asynchronously
+    void flush_stdout(int sig) { // can be called asynchronously
         fprintf(outfile, "\n");
         fflush(outfile);
         signal(sig, SIG_DFL);
         raise(sig);
     }
 
-    void update_terminal_width(int sig = -1)
-    { // can be called asynchronously
+    void update_terminal_width(int sig = -1) { // can be called asynchronously
         struct winsize size;
         ioctl(STDOUT_FILENO, TIOCGWINSZ, &size);
         terminal_width = size.ws_col;
@@ -43,20 +40,18 @@ namespace yapm
     const char *COLOR_BLUE = "\033[1m\033[34m"; // with bold
     const char *COLOR_LIME = "\033[32m";
 
-    void hsv_to_rgb(float h, float s, float v, int &r, int &g, int &b)
-    {
-        if (s < 1e-6)
-        {
+    void hsv_to_rgb(float h, float s, float v, int &r, int &g, int &b) {
+        if (s < 1e-6) {
             v *= 255., r = v, g = v, b = v;
         }
-        int i = (int)(h * 6.0);
+        int i = (int) (h * 6.0);
         float f = (h * 6.) - i;
-        int p = (int)(255.0 * (v * (1. - s)));
-        int q = (int)(255.0 * (v * (1. - s * f)));
-        int t = (int)(255.0 * (v * (1. - s * (1. - f))));
+        int p = (int) (255.0 * (v * (1. - s)));
+        int q = (int) (255.0 * (v * (1. - s * f)));
+        int t = (int) (255.0 * (v * (1. - s * (1. - f))));
         v *= 255;
         i %= 6;
-        int vi = (int)v;
+        int vi = (int) v;
         if (i == 0)
             r = vi, g = t, b = p;
         else if (i == 1)
@@ -71,12 +66,11 @@ namespace yapm
             r = vi, g = p, b = q;
     }
 
-    class pm
-    {
+    class pm {
     protected:
         // time, iteration counters and deques for rate calculations
-        std::chrono::time_point<std::chrono::system_clock> t_first = std::chrono::system_clock::now();
-        std::chrono::time_point<std::chrono::system_clock> t_old = std::chrono::system_clock::now();
+        std::chrono::time_point <std::chrono::system_clock> t_first = std::chrono::system_clock::now();
+        std::chrono::time_point <std::chrono::system_clock> t_old = std::chrono::system_clock::now();
         int n_old = 0;
         std::vector<double> deq_t;
         std::vector<int> deq_n;
@@ -120,40 +114,36 @@ namespace yapm
         /////////////////////////////////////
         // formatting
         /////////////////////////////////////
-        inline void _print_color(const char *color)
-        {
+        inline void _print_color(const char *color) {
             if (use_colors)
                 fprintf(outfile, color);
         }
-        inline void _print_bar()
-        {
+
+        inline void _print_bar() {
             double pct = __tmp_pct > 1 ? 1 : __tmp_pct;
             double fills = (pct * bar_width);
             int ifills = fills;
 
-            if (use_colors)
-            {
-                if (color_transition)
-                {
+            if (use_colors) {
+                if (color_transition) {
                     // red (hue=0) to green (hue=1/3)
                     int r = 255, g = 255, b = 255;
                     hsv_to_rgb(0.0 + pct / 3, 0.65, 1.0, r, g, b);
                     fprintf(outfile, "\033[38;2;%d;%d;%dm", r, g, b);
-                }
-                else
+                } else
                     fprintf(outfile, COLOR_LIME);
             }
             fprintf(outfile, "%s", left_pad.c_str());
             for (int i = 0; i < ifills; i++)
                 fprintf(outfile, bars[8]);
             if (!in_screen and (pct < 1.0))
-                fprintf(outfile, "%s", bars[(int)(8.0 * (fills - ifills))]);
+                fprintf(outfile, "%s", bars[(int) (8.0 * (fills - ifills))]);
             for (int i = 0; i < bar_width - ifills - 1; i++)
                 fprintf(outfile, bars[0]);
             fprintf(outfile, "%s", right_pad.c_str());
         }
-        inline void _format_speed(std::ostringstream &oss, const double &avgrate)
-        {
+
+        inline void _format_speed(std::ostringstream &oss, const double &avgrate) {
             if (!enable_speed_stats)
                 return;
 
@@ -166,24 +156,21 @@ namespace yapm
 
             oss << std::fixed << std::setprecision(1) << avgrate / div << unit;
         }
-        virtual inline void _sstream_progress_text(std::ostringstream &oss)
-        {
+
+        virtual inline void _sstream_progress_text(std::ostringstream &oss) {
             oss << cur_ << "/" << total_;
         }
-        inline void _format_simplify_time_(std::ostringstream &oss, int seconds)
-        {
+
+        inline void _format_simplify_time_(std::ostringstream &oss, int seconds) {
             int hours, minutes, days;
             hours = minutes = days = -1;
-            if (seconds >= 60)
-            {
+            if (seconds >= 60) {
                 minutes = seconds / 60;
                 seconds = seconds % 60;
-                if (minutes >= 60)
-                {
+                if (minutes >= 60) {
                     hours = minutes / 60;
                     minutes = minutes % 60;
-                    if (hours >= 24)
-                    {
+                    if (hours >= 24) {
                         days = hours / 24;
                         hours = hours % 24;
                     }
@@ -197,17 +184,18 @@ namespace yapm
                 oss << std::setw(2) << std::setfill('0') << minutes << "m";
             oss << std::setw(2) << std::setfill('0') << seconds << "s";
         }
+
         /////////////////////////////////////
         // internal output and house keeping
         /////////////////////////////////////
-        inline void _print_progress(bool last=false)
-        {
+        inline void _print_progress(bool last = false) {
             fprintf(outfile, "\015"); // clear line
             // label and pct
             std::ostringstream pbar_pct;
             std::ostringstream pbar_suf;
 
-            pbar_pct << label << std::fixed << std::setprecision(1) << std::setw(5) << std::setfill(' ') << __tmp_pct * 100 << "%";
+            pbar_pct << label << std::fixed << std::setprecision(1) << std::setw(5)
+                     << std::setfill(' ') << __tmp_pct * 100 << "%";
             std::string pbar_pct_str = pbar_pct.str();
 
             if (!last) {
@@ -215,8 +203,7 @@ namespace yapm
                 if (suffix.length() > 0)
                     suffix.insert(0, " ");
             }
-            if (has_total_it || print_bar)
-            {
+            if (has_total_it || print_bar) {
                 // percentage
                 _sstream_progress_text(pbar_suf);
                 pbar_suf << " [", _format_speed(pbar_suf, __tmp_avgrate);
@@ -227,10 +214,10 @@ namespace yapm
                 std::string pbar_suf_str = pbar_suf.str();
 
                 compute_pbar_size(
-                    pbar_pct_str.length() + 
-                    pbar_suf_str.length() + 
-                    suffix.length() + 
-                    2);
+                        pbar_pct_str.length() +
+                        pbar_suf_str.length() +
+                        suffix.length() +
+                        2);
                 _print_color(COLOR_RED);
                 fprintf(outfile, "%s", pbar_pct_str.c_str());
                 _print_bar();
@@ -238,9 +225,7 @@ namespace yapm
                 fprintf(outfile, "%s", pbar_suf_str.c_str());
                 fprintf(outfile, COLOR_LIME);
                 fprintf(outfile, "%s", suffix.c_str());
-            }
-            else
-            {
+            } else {
                 _print_color(COLOR_BLUE);
                 pbar_suf << "[", _format_speed(pbar_suf, __tmp_avgrate);
                 pbar_suf << "|", _format_simplify_time_(pbar_suf, __tmp_dt_tot);
@@ -258,16 +243,15 @@ namespace yapm
             // if(!has_total_it || (total_ - cur_) > period) fflush(outfile);
             fflush(outfile);
         }
-        inline void _internal_update_end()
-        {
+
+        inline void _internal_update_end() {
             suffix_.str("");
         }
-        virtual inline void _compute_total()
-        {
-            if (has_total_it)
-            {
+
+        virtual inline void _compute_total() {
+            if (has_total_it) {
                 __tmp_remain_t = (total_ - cur_) / __tmp_avgrate;
-                __tmp_pct = (double)cur_ / (total_);
+                __tmp_pct = (double) cur_ / (total_);
                 // // last small chunk of percentage.
                 // if ((total_ - cur_) <= period)
                 // {
@@ -278,20 +262,21 @@ namespace yapm
                 // }
             }
         }
-        inline bool _internal_update()
-        {
-            bool closed_to_finish = has_total_it && total_ - cur_ < 2; // will finish loop soon
-            if (is_tty && (cur_ % period == 0 || closed_to_finish))
-            {
+
+        inline bool _internal_update() {
+            bool closed_to_finish =
+                    has_total_it && total_ - cur_ < 2; // will finish loop soon
+            if (is_tty && (cur_ % period == 0 || closed_to_finish)) {
                 auto now = std::chrono::system_clock::now();
-                float dt = ((std::chrono::duration<double>)(now - t_old)).count();
+                float dt = ((std::chrono::duration < double > )(now - t_old)).count();
                 nupdates++;
 
                 // do nothing if last refresh time is too recent.
                 if (!closed_to_finish && dt < min_update_time)
                     return false;
 
-                __tmp_dt_tot = ((std::chrono::duration<double>)(now - t_first)).count();
+                __tmp_dt_tot = ((std::chrono::duration < double > )(
+                        now - t_first)).count();
                 int dn = cur_ - n_old;
                 n_old = cur_;
                 t_old = now;
@@ -303,17 +288,14 @@ namespace yapm
                 deq_n.push_back(dn);
 
                 __tmp_avgrate = 0.;
-                if (use_ema)
-                {
+                if (use_ema) {
                     __tmp_avgrate = deq_n[0] / deq_t[0];
-                    for (unsigned int i = 1; i < deq_t.size(); i++)
-                    {
+                    for (unsigned int i = 1; i < deq_t.size(); i++) {
                         double r = 1.0 * deq_n[i] / deq_t[i];
-                        __tmp_avgrate = alpha_ema * r + (1.0 - alpha_ema) * __tmp_avgrate;
+                        __tmp_avgrate =
+                                alpha_ema * r + (1.0 - alpha_ema) * __tmp_avgrate;
                     }
-                }
-                else
-                {
+                } else {
                     double dtsum = std::accumulate(deq_t.begin(), deq_t.end(), 0.);
                     int dnsum = std::accumulate(deq_n.begin(), deq_n.end(), 0.);
                     __tmp_avgrate = dnsum / dtsum;
@@ -321,9 +303,9 @@ namespace yapm
 
                 // learn an appropriate period length to avoid spamming outfile
                 // and slowing down the loop, shoot for ~25Hz and smooth over 3 seconds
-                if (nupdates > 10)
-                {
-                    period = (int)(std::min(std::max((1.0 / 25) * cur_ / __tmp_dt_tot, 1.0), 5e5));
+                if (nupdates > 10) {
+                    period = (int) (std::min(
+                            std::max((1.0 / 25) * cur_ / __tmp_dt_tot, 1.0), 5e5));
                     smoothing = 25 * 3;
                 }
                 _compute_total();
@@ -331,36 +313,37 @@ namespace yapm
             }
             return false;
         }
-        inline void compute_pbar_size(const int &other_length)
-        {
+
+        inline void compute_pbar_size(const int &other_length) {
             bar_width = terminal_width - other_length;
         }
 
     public:
-        pm()
-        {
+        pm() {
             if (in_screen)
                 set_theme_basic(), color_transition = false;
             else if (in_tmux)
                 color_transition = false;
             update_terminal_width();
-            signal(SIGINT, flush_stdout);            // flush outfile when program is exiting
-            signal(SIGWINCH, update_terminal_width); // flush outfile when program is exiting
+            signal(SIGINT,
+                   flush_stdout);            // flush outfile when program is exiting
+            signal(SIGWINCH,
+                   update_terminal_width); // flush outfile when program is exiting
             _print_progress();
         }
-        pm(const ssize_t total) : pm()
-        {
+
+        pm(const ssize_t total) : pm() {
             total_ = total;
             has_total_it = true;
         }
-        template <class T>
-        pm &operator<<(const T &t)
-        {
+
+        template<class T>
+        pm &operator<<(const T &t) {
             suffix_ << t;
             return *this;
         }
-        void reset()
-        {
+
+        void reset() {
             t_first = std::chrono::system_clock::now();
             t_old = std::chrono::system_clock::now();
             n_old = 0;
@@ -378,16 +361,15 @@ namespace yapm
         }
 
         ///////////////////////////////////////////////////////////////
-        void update()
-        {
+        void update() {
             /* Called to increment internal counter */
             ++cur_;
             if (_internal_update())
                 _print_progress();
             _internal_update_end();
         }
-        void progress(int curr, int tot)
-        {
+
+        void progress(int curr, int tot) {
             /* Called directly set current counter and total */
             cur_ = curr, total_ = tot;
             has_total_it = true;
@@ -399,28 +381,41 @@ namespace yapm
         ///////////////////////////////////////////////////////////////
 
         void set_theme_line() { bars = {"─", "─", "─", "╾", "╾", "╾", "╾", "━", "═"}; }
-        void set_theme_circle() { bars = {" ", "◓", "◑", "◒", "◐", "◓", "◑", "◒", "#"}; }
-        void set_theme_braille() { bars = {" ", "⡀", "⡄", "⡆", "⡇", "⡏", "⡟", "⡿", "⣿"}; }
-        void set_theme_braille_spin() { bars = {" ", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠇", "⠿"}; }
-        void set_theme_vertical() { bars = {"▁", "▂", "▃", "▄", "▅", "▆", "▇", "█", "█"}; }
-        void set_theme_basic()
-        {
+
+        void set_theme_circle() {
+            bars = {" ", "◓", "◑", "◒", "◐", "◓", "◑", "◒", "#"};
+        }
+
+        void set_theme_braille() {
+            bars = {" ", "⡀", "⡄", "⡆", "⡇", "⡏", "⡟", "⡿", "⣿"};
+        }
+
+        void set_theme_braille_spin() {
+            bars = {" ", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠇", "⠿"};
+        }
+
+        void set_theme_vertical() {
+            bars = {"▁", "▂", "▃", "▄", "▅", "▆", "▇", "█", "█"};
+        }
+
+        void set_theme_basic() {
             bars = {" ", " ", " ", " ", " ", " ", " ", " ", "#"};
             left_pad = "|";
             right_pad = "|";
         }
+
         void set_label(std::string label_) { label = label_.append(" "); }
-        void set_total(const int total)
-        {
+
+        void set_total(const int total) {
             total_ = total;
             has_total_it = true;
         }
-        void disable_colors()
-        {
+
+        void disable_colors() {
             color_transition = use_colors = false;
         }
-        void finish()
-        {
+
+        void finish() {
             if (finished)
                 return;
             finished = true;
@@ -433,59 +428,58 @@ namespace yapm
         }
     };
 
-    class pm_timer : public pm
-    {
+    class pm_timer : public pm {
     protected:
         double total_seconds_ = 0.;
 
-        inline void _compute_total()
-        {
+        inline void _compute_total() {
             auto now = std::chrono::system_clock::now();
 
-            double passed_time = ((std::chrono::duration<double>)(now - t_first)).count();
+            double passed_time = ((std::chrono::duration < double > )(
+                    now - t_first)).count();
             __tmp_remain_t = total_seconds_ - passed_time;
             __tmp_pct = passed_time / total_seconds_;
         }
 
-        virtual inline void _sstream_progress_text(std::ostringstream &oss)
-        {
+        virtual inline void _sstream_progress_text(std::ostringstream &oss) {
             oss << cur_ << "it";
         }
 
     public:
         pm_timer() = delete;
-        pm_timer(const int seconds) : pm_timer((double)seconds) {}
-        pm_timer(const double seconds) : pm(), total_seconds_(seconds)
-        {
+
+        pm_timer(const int seconds) : pm_timer((double) seconds) {}
+
+        pm_timer(const double seconds) : pm(), total_seconds_(seconds) {
             print_bar = true;
         }
+
         void progress(int curr, int tot) = delete;
     };
 
-    template <class It>
-    class IteratorProgressMonitor : public pm
-    {
+    template<class It>
+    class IteratorProgressMonitor : public pm {
     public:
         IteratorProgressMonitor(It it, It it_end)
-            : IteratorProgressMonitor(it, it_end, std::distance(it, it_end))
-        {}
+                : IteratorProgressMonitor(it, it_end, std::distance(it, it_end)) {}
+
         IteratorProgressMonitor(It it, It it_end, int total)
-            : pm(),
-              iter_begin_(std::move(it)),
-              iter_end_(std::move(it_end))
-        {
+                : pm(),
+                  iter_begin_(std::move(it)),
+                  iter_end_(std::move(it_end)) {
             total_ = total;
             has_total_it = true;
             _print_progress();
         }
+
         IteratorProgressMonitor(IteratorProgressMonitor &&) = default;
+
         ~IteratorProgressMonitor() {
             // finish bar when iterator is done.
             finish();
         }
 
-        struct iterator
-        {
+        struct iterator {
             // // using iterator_category = typename It::iterator_category;
             // using value_type = typename It::value_type;
             // // using difference_type = typename It::difference_type;
@@ -494,50 +488,46 @@ namespace yapm
 
         public:
             iterator(IteratorProgressMonitor<It> &parent, It &inner_iter)
-                : parent_(parent), iter_(inner_iter) {}
+                    : parent_(parent), iter_(inner_iter) {}
 
-            inline iterator &operator++()
-            {
+            inline iterator &operator++() {
                 ++(iter_);
                 i++;
                 // std::cout << i << std::endl;
                 parent_.update();
                 return *this;
             }
-            inline iterator operator++(int)
-            {
+
+            inline iterator operator++(int) {
                 auto retval = *this;
                 ++(*this);
                 parent_.update();
                 return retval;
             }
 
-            inline bool operator==(const iterator &other) const
-            {
+            inline bool operator==(const iterator &other) const {
                 return iter_ == other.iter_;
             }
-            inline bool operator!=(const iterator &other) const
-            {
+
+            inline bool operator!=(const iterator &other) const {
                 return !(*this == other);
             }
 
-            inline reference operator*() const
-            {
+            inline reference operator*() const {
                 return *iter_;
             }
 
-        int i = 0;
+            int i = 0;
         private:
             IteratorProgressMonitor<It> &parent_;
             It &iter_;
         };
 
-        inline iterator begin()
-        {
+        inline iterator begin() {
             return IteratorProgressMonitor<It>::iterator(*this, iter_begin_);
         }
-        inline iterator end()
-        {
+
+        inline iterator end() {
             return IteratorProgressMonitor<It>::iterator(*this, iter_end_);
         }
 
@@ -549,22 +539,20 @@ namespace yapm
     }; // class iter
 
     // progress monitor for rvalue, needed to take ownership of container
-    template <class Container>
-    class IteratorProgressMonitorForRvalue : public IteratorProgressMonitor<typename Container::const_iterator>
-    {
+    template<class Container>
+    class IteratorProgressMonitorForRvalue
+            : public IteratorProgressMonitor<typename Container::const_iterator> {
         using It = typename Container::const_iterator;
-        public:
-            IteratorProgressMonitorForRvalue(const Container &&container)
+    public:
+        IteratorProgressMonitorForRvalue(const Container &&container)
                 : IteratorProgressMonitor<It>(container.begin(), container.end()),
-                  C(std::move(container))
-            {
-                // C = std::move(container);
+                  C(std::move(container)) {
+            // we need to reassign AGAIN because container is now invalid, and
+            // we need to assign the begin and end from `C`.
+            this->iter_begin_ = C.begin();
+            this->iter_end_ = C.end();
+        }
 
-                // we need to reassign AGAIN because container is now invalid, and
-                // we need to assign the begin and end from `C`.
-                this->iter_begin_ = C.begin();
-                this->iter_end_ = C.end();
-            }
         Container C;
     };
 
@@ -573,66 +561,65 @@ namespace yapm
     // Builtin range iterator
     ///////////////////////////////////////////////////////////////
 
-    template <class IntType>
-    class RangeContainer
-    {
-        class RangeIterator
-        {
+    template<class IntType>
+    class RangeContainer {
+        class RangeIterator {
         public:
             RangeIterator(IntType value_, IntType step_)
-                : value(value_), step(step_) {}
-            bool operator!=(RangeIterator const &other) const
-            {
+                    : value(value_), step(step_) {}
+
+            bool operator!=(RangeIterator const &other) const {
                 return !(*this == other);
             }
-            bool operator==(RangeIterator const &other) const
-            {
+
+            bool operator==(RangeIterator const &other) const {
                 if (step > 0)
                     return value >= other.value;
                 else
                     return value <= other.value;
             }
-            IntType const &operator*() const
-            {
+
+            IntType const &operator*() const {
                 return value;
             }
-            RangeIterator &operator++()
-            {
+
+            RangeIterator &operator++() {
                 // ++value;
                 value += step;
                 return *this;
             }
 
-            typedef const IntType& reference;
+            typedef const IntType &reference;
 
         private:
             IntType value;
             IntType step;
         };
+
     public:
         RangeContainer(IntType from_, IntType to_, IntType step_)
-            : from(from_), to(to_), step(step_) {
-                if (step_ == 0)
-                    throw std::invalid_argument("step size must be non-zero");
-                if (from_ < to_ && step_ < 0)
-                    throw std::invalid_argument("step size must be positive if `from` is less than `to`!");
-                if (from_ > to_ && step_ > 0)
-                    throw std::invalid_argument("step size must be negative if `from` is larger than `to`!");
-            }
+                : from(from_), to(to_), step(step_) {
+            if (step_ == 0)
+                throw std::invalid_argument("step size must be non-zero");
+            if (from_ < to_ && step_ < 0)
+                throw std::invalid_argument(
+                        "step size must be positive if `from` is less than `to`!");
+            if (from_ > to_ && step_ > 0)
+                throw std::invalid_argument(
+                        "step size must be negative if `from` is larger than `to`!");
+        }
 
         RangeContainer(IntType from_, IntType to_)
-            : RangeContainer(from_, to_, 1) {}
+                : RangeContainer(from_, to_, 1) {}
 
         RangeContainer(IntType to_)
-            : RangeContainer(0, to_, 1) {}
+                : RangeContainer(0, to_, 1) {}
 
-        RangeIterator begin() const
-        {
+        RangeIterator begin() const {
             return RangeIterator(from, step);
         }
 
-        RangeIterator end() const
-        {
+        RangeIterator end() const {
             return RangeIterator(to, -step);
         }
 
@@ -645,44 +632,35 @@ namespace yapm
     ///////////////////////////////////////////////////////////////
     // public interface for accessing pm as a wrapper iterator
     ///////////////////////////////////////////////////////////////
-    template <class It>
-    auto iter(const It &first, const It &last)
-    {
+    template<class It>
+    auto iter(const It &first, const It &last) {
         return IteratorProgressMonitor<It>(first, last);
     }
 
-    template <class It>
-    auto iter(const It &first, const It &last, const size_t total)
-    {
+    template<class It>
+    auto iter(const It &first, const It &last, const size_t total) {
         return IteratorProgressMonitor<It>(first, last, total);
     }
 
-    template <class It>
-    auto iter(It &first, It &last, size_t total)
-    {
-        return IteratorProgressMonitor<It>(first, last, total);
-    }
-
-    template <class Container>
-    auto iter(const Container &C)
-    {
+    // lvalue container
+    template<class Container>
+    auto iter(const Container &C) {
         return iter(C.begin(), C.end());
     }
 
-    template <class Container>
-    auto iter(const Container &&C)
-    {
+    // rvalue container
+    template<class Container>
+    auto iter(const Container &&C) {
         return IteratorProgressMonitorForRvalue<Container>(std::move(C));
     }
 
     // create an implicit iterator, similar to tqdm.trange
-    template <class IntType>
-    auto range(IntType start, IntType end, IntType step = 1)
-    {
+    template<class IntType>
+    auto range(IntType start, IntType end, IntType step = 1) {
         RangeContainer<IntType> rc(start, end, step);
-        IntType differences = (end-start);
+        IntType differences = (end - start);
         size_t it_len = differences / step;
-        
+
         // add one if there are any reminder.
         IntType leap = it_len * step;
         if (start < end) {
@@ -696,9 +674,8 @@ namespace yapm
         return iter(rc.begin(), rc.end(), it_len);
     }
 
-    template <class IntType>
-    auto range(IntType end)
-    {
+    template<class IntType>
+    auto range(IntType end) {
         return range((IntType) 0, end, (IntType) 1);
     }
 
