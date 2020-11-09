@@ -90,6 +90,7 @@ int main() {
     auto bar7 = yapm::range(1.4e2, -100.2, -5.5);
     for (auto &&t : bar7)
     {
+        // bar7.update();  // SHOULD NOT USE UPDATE
         bar7 << "val=" << t;
     }
     bar7.finish();
