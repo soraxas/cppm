@@ -1,4 +1,4 @@
-#include "yapm.hpp"
+#include "cppm.hpp"
 
 
 
@@ -16,7 +16,7 @@ int main() {
     int N = 20000;
 
     std::cout << "Progress monitor without total:" << std::endl;
-    yapm::pm bar1;
+    cppm::pm bar1;
     // if you want to output the progress monitor to some log file:
     // bar1.setOutFilename("/tmp/yadm.log");
     for (int i = 0; i < N; i++)
@@ -29,7 +29,7 @@ int main() {
     bar1.finish();
     
     std::cout << "Overhead of loop only:" << std::endl;
-    yapm::pm bar2;
+    cppm::pm bar2;
     for (int i = 0; i < N; i++)
     {
         bar2.update();
@@ -39,7 +39,7 @@ int main() {
     bar2.finish();
     
     std::cout << "Progress monitor with given total:" << std::endl;
-    yapm::pm bar3(N);
+    cppm::pm bar3(N);
     for (int i = 0; i < N; i++)
     {
         usleep(.1);
@@ -49,8 +49,8 @@ int main() {
     }
     bar3.finish();
     
-    std::cout << "YAPM as a timer with an estimated time-to-finish:" << std::endl;
-    yapm::pm_timer bar4(N * 500 * 1e-6);  // estimated time to finish
+    std::cout << "CPPM as a timer with an estimated time-to-finish:" << std::endl;
+    cppm::pm_timer bar4(N * 500 * 1e-6);  // estimated time to finish
     for (int i = 0; i < N; i++)
     {
         usleep(500);
@@ -58,9 +58,9 @@ int main() {
     }
     bar4.finish();
     
-    std::cout << "YAPM with wrapping some iterator (lvalue):" << std::endl;
-    auto list = get_vector(5000000);
-    auto bar5 = yapm::iter(list);
+    std::cout << "CPPM with wrapping some iterator (lvalue):" << std::endl;
+    auto list = get_vector(50000000);
+    auto bar5 = cppm::iter(list);
     for (auto &&t: bar5)
     {
         // bar5.update();  // SHOULD NOT USE UPDATE
@@ -68,28 +68,28 @@ int main() {
     }
     bar5.finish();
     
-    std::cout << "YAPM with wrapping some iterator (rvalue):" << std::endl;
-    auto bar6 = yapm::iter(get_vector(5000000));
+    std::cout << "CPPM with wrapping some iterator (rvalue):" << std::endl;
+    auto bar6 = cppm::iter(get_vector(5000000));
     for (auto &&t: bar6)
     {
         bar6 << t;
     }
     bar6.finish();
     
-    std::cout << "YAPM with easy range (only end):" << std::endl;
-    for (auto &&t : yapm::range(100))
+    std::cout << "CPPM with easy range (only end):" << std::endl;
+    for (auto &&t : cppm::range(100))
     {}
     
-    std::cout << "YAPM with easy range (start & end):" << std::endl;
-    for (auto &&t : yapm::range(10, 100))
+    std::cout << "CPPM with easy range (start & end):" << std::endl;
+    for (auto &&t : cppm::range(10, 100))
     {}
     
-    std::cout << "YAPM with easy range (start & end & step):" << std::endl;
-    for (auto &&t : yapm::range(10, 100, 5))
+    std::cout << "CPPM with easy range (start & end & step):" << std::endl;
+    for (auto &&t : cppm::range(10, 100, 5))
     {}
     
-    std::cout << "YAPM with easy range (negative step):" << std::endl;
-    auto bar7 = yapm::range(1.4e2, -100.2, -5.5);
+    std::cout << "CPPM with easy range (negative step):" << std::endl;
+    auto bar7 = cppm::range(1.4e2, -100.2, -5.5);
     for (auto &&t : bar7)
     {
         // bar7.update();  // SHOULD NOT USE UPDATE
@@ -99,7 +99,7 @@ int main() {
 
     std::cout << "===== All themes =====" << std::endl;
     std::cout << "Basic:" << std::endl;
-    yapm::pm bar;
+    cppm::pm bar;
     bar.reset();
     bar.set_theme_basic();
     bar.set_total(N);

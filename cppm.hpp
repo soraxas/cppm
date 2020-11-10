@@ -20,7 +20,7 @@
 
 #define UNUSED(x) (void)(x)
 
-namespace yapm {
+namespace cppm {
     unsigned int terminal_width = 80;
     FILE *def_outfile = stderr;
 
