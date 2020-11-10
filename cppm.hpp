@@ -24,50 +24,14 @@ namespace cppm {
     unsigned int terminal_width = 80;
     FILE *def_outfile = stderr;
 
-    void flush_stdout(int sig) { // can be called asynchronously
-        fprintf(def_outfile, "\n");
-        fflush(def_outfile);
-        signal(sig, SIG_DFL);
-        raise(sig);
-    }
-
-    void update_terminal_width(int sig=-1) { // can be called asynchronously
-        UNUSED(sig);
-        struct winsize size;
-        ioctl(STDOUT_FILENO, TIOCGWINSZ, &size);
-        terminal_width = size.ws_col;
-    }
+    void flush_stdout(int sig);
+    void update_terminal_width(int sig=-1);
+    void hsv_to_rgb(float h, float s, float v, int &r, int &g, int &b);
 
     const char *COLOR_RESET = "\033[0m\033[32m\033[0m\015";
     const char *COLOR_RED = "\033[1m\033[31m";  // with bold
     const char *COLOR_BLUE = "\033[1m\033[34m"; // with bold
     const char *COLOR_LIME = "\033[32m";
-
-    void hsv_to_rgb(float h, float s, float v, int &r, int &g, int &b) {
-        if (s < 1e-6) {
-            v *= 255., r = v, g = v, b = v;
-        }
-        int i = (int) (h * 6.0);
-        float f = (h * 6.) - i;
-        int p = (int) (255.0 * (v * (1. - s)));
-        int q = (int) (255.0 * (v * (1. - s * f)));
-        int t = (int) (255.0 * (v * (1. - s * (1. - f))));
-        v *= 255;
-        i %= 6;
-        int vi = (int) v;
-        if (i == 0)
-            r = vi, g = t, b = p;
-        else if (i == 1)
-            r = q, g = vi, b = p;
-        else if (i == 2)
-            r = p, g = vi, b = t;
-        else if (i == 3)
-            r = p, g = q, b = vi;
-        else if (i == 4)
-            r = t, g = p, b = vi;
-        else if (i == 5)
-            r = vi, g = p, b = q;
-    }
 
     class pm {
     protected:
@@ -398,7 +362,9 @@ namespace cppm {
 
         ///////////////////////////////////////////////////////////////
 
-        void set_theme_line() { bars = {"─", "─", "─", "╾", "╾", "╾", "╾", "━", "═"}; }
+        void set_theme_line() { 
+            bars = {"─", "─", "─", "╾", "╾", "╾", "╾", "━", "═"};
+        }
 
         void set_theme_circle() {
             bars = {" ", "◓", "◑", "◒", "◐", "◓", "◑", "◒", "#"};
@@ -702,5 +668,47 @@ namespace cppm {
         return range((IntType) 0, end, (IntType) 1);
     }
 
+    ///////////////////////////////////////////////////////////////
+    // Helpers
+    ///////////////////////////////////////////////////////////////
+    void flush_stdout(int sig) {
+        fprintf(def_outfile, "\n");
+        fflush(def_outfile);
+        signal(sig, SIG_DFL);
+        raise(sig);
+    }
+
+    void update_terminal_width(int sig) {
+        UNUSED(sig);
+        struct winsize size;
+        ioctl(STDOUT_FILENO, TIOCGWINSZ, &size);
+        terminal_width = size.ws_col;
+    }
+
+    void hsv_to_rgb(float h, float s, float v, int &r, int &g, int &b) {
+        if (s < 1e-6) {
+            v *= 255., r = v, g = v, b = v;
+        }
+        int i = (int) (h * 6.0);
+        float f = (h * 6.) - i;
+        int p = (int) (255.0 * (v * (1. - s)));
+        int q = (int) (255.0 * (v * (1. - s * f)));
+        int t = (int) (255.0 * (v * (1. - s * (1. - f))));
+        v *= 255;
+        i %= 6;
+        int vi = (int) v;
+        if (i == 0)
+            r = vi, g = t, b = p;
+        else if (i == 1)
+            r = q, g = vi, b = p;
+        else if (i == 2)
+            r = p, g = vi, b = t;
+        else if (i == 3)
+            r = p, g = q, b = vi;
+        else if (i == 4)
+            r = t, g = p, b = vi;
+        else if (i == 5)
+            r = vi, g = p, b = q;
+    }
 }; // end namespace pm
 // #endif
