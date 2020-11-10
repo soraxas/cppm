@@ -88,7 +88,7 @@ namespace cppm {
         }
 
         inline void _print_bar() {
-            double pct = __tmp_pct > 1 ? 1 : __tmp_pct;
+            double pct = __tmp_pct > 1. ? 1. : __tmp_pct;  // clamp
             double fills = (pct * bar_width);
             int ifills = fills;
 
@@ -219,7 +219,7 @@ namespace cppm {
         virtual inline void _compute_total() {
             if (has_total_it) {
                 __tmp_remain_t = (total_ - cur_) / __tmp_avgrate;
-                __tmp_pct = (double) cur_ / (total_);
+                __tmp_pct = ((double) cur_) / ((double) total_);
                 // // last small chunk of percentage.
                 // if ((total_ - cur_) <= period)
                 // {
@@ -405,8 +405,8 @@ namespace cppm {
             finished = true;
             if (has_total_it)
                 cur_ = total_;
+            _compute_total();
             _print_progress(true);
-            // progress(total_,total_);
             fprintf(outfile_, "\n");
             fflush(outfile_);
         }
