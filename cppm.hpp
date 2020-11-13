@@ -35,7 +35,7 @@ namespace cppm {
 
     class pm {
         public:
-            unsigned short suffix_percision = 3;
+            bool format_suffix_floating_pt = true;
             bool use_ema = true;
             float alpha_ema = 0.1;
             const float min_update_time = 0.15;
@@ -714,18 +714,40 @@ namespace cppm {
             r = vi, g = p, b = q;
     }
 
+    #define FIXED_PREC(x) std::fixed << std::setprecision(x)
+    #define SCIEN_PREC(x) std::scientific << std::setprecision(x)
+ 
     // implementation of specialised formatting of float/double
     // make it a fixed percision if it is float or double
     template<>
     pm &pm::operator<<<double>(const double &t) {
-        std::stringstream _stream;
-        _stream << t;
-        auto _str = _stream.str();
-        if (_str.length() > suffix_percision + 3) {  // 3 characters includes e, +-, and as numeric
-            suffix_ << std::scientific << std::setprecision(suffix_percision - 1) << t;  // -1 because this mode includes a number before decimal place
+        if (format_suffix_floating_pt) {
+            double abs_t = abs(t);
+            
+            if (abs_t < 1e-3 || abs_t > 1e3) {
+                // format as x.xxe-08
+                suffix_ << SCIEN_PREC(2) << t;  // -1 because this mode includes a number before decimal place
+            }
+            else {
+                unsigned short num_decimal_place;
+                if (abs_t < 1) {
+                    // format as 0.xxx
+                    num_decimal_place = 3;
+                }
+                else if (abs_t < 100) {
+                    // format as 12.34
+                    num_decimal_place = 2;
+                }
+                else /* if (abs_t < 1000) */ {
+                    // format as 123.4
+                    num_decimal_place = 1;
+                }
+                suffix_ << SCIEN_PREC(num_decimal_place) << t;  // -1 because this mode includes a number before decimal place
+            }
         } else {
-            suffix_ << _stream.str();
+            suffix_ << t;
         }
+
         return *this;
     }
 
