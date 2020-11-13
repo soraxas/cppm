@@ -34,57 +34,61 @@ namespace cppm {
     const char *COLOR_LIME = "\033[32m";
 
     class pm {
-    protected:
-        // time, iteration counters and deques for rate calculations
-        std::chrono::time_point <std::chrono::system_clock> t_first = std::chrono::system_clock::now();
-        std::chrono::time_point <std::chrono::system_clock> t_old = std::chrono::system_clock::now();
-        int n_old = 0;
-        std::vector<double> deq_t;
-        std::vector<int> deq_n;
-        size_t nupdates = 0;
-        size_t total_ = 0;
-        size_t cur_ = 0;
-        size_t period = 1;
-        unsigned int smoothing = 50;
-        bool use_ema = true;
-        bool has_total_it = false;
-        bool print_bar = false;
-        bool finished = false;
-        float alpha_ema = 0.1;
-        const float min_update_time = 0.15;
-        std::stringstream suffix_;
-        std::string suffix;
-        FILE* outfile_ = def_outfile;
+        public:
+            unsigned short suffix_percision = 3;
+            bool use_ema = true;
+            float alpha_ema = 0.1;
+            const float min_update_time = 0.15;
 
-        // short terminal_width = 80;
-        std::vector<const char *> bars = {" ", "▏", "▎", "▍", "▌", "▋", "▊", "▉", "█"};
+        protected:
+            // time, iteration counters and deques for rate calculations
+            std::chrono::time_point<std::chrono::system_clock> t_first = std::chrono::system_clock::now();
+            std::chrono::time_point<std::chrono::system_clock> t_old = std::chrono::system_clock::now();
+            int n_old = 0;
+            std::vector<double> deq_t;
+            std::vector<int> deq_n;
+            size_t nupdates = 0;
+            size_t total_ = 0;
+            size_t cur_ = 0;
+            size_t period = 1;
+            unsigned int smoothing = 50;
+            bool has_total_it = false;
+            bool print_bar = false;
+            bool finished = false;
+            std::stringstream suffix_;
+            std::string suffix;
+            FILE *outfile_ = def_outfile;
 
-        bool in_screen = (system("test $STY") == 0);
-        bool in_tmux = (system("test $TMUX") == 0);
-        bool is_tty = isatty(1);
-        bool use_colors = true;
-        bool color_transition = true;
-        bool enable_speed_stats = true;
-        int bar_width = 40;
+            // short terminal_width = 80;
+            std::vector<const char *> bars = {" ", "▏", "▎", "▍", "▌", "▋", "▊", "▉", "█"};
 
-        /////////////////////////////////////
-        double __tmp_pct = 0.;
-        double __tmp_avgrate = 0.;
-        double __tmp_remain_t = 0.;
-        double __tmp_dt_tot = 0.;
-        /////////////////////////////////////
+            bool in_screen = (system("test $STY") == 0);
+            bool in_tmux = (system("test $TMUX") == 0);
+            bool is_tty = isatty(1);
+            bool use_colors = true;
+            bool color_transition = true;
+            bool enable_speed_stats = true;
+            int bar_width = 40;
 
-        std::string left_pad = "▕";
-        std::string right_pad = "▏";
-        std::string label = "";
+            /////////////////////////////////////
+            double __tmp_pct = 0.;
+            double __tmp_avgrate = 0.;
+            double __tmp_remain_t = 0.;
+            double __tmp_dt_tot = 0.;
+            /////////////////////////////////////
 
-    protected:
-        /////////////////////////////////////
-        // formatting
-        /////////////////////////////////////
-        inline void _print_color(const char *color) {
-            if (use_colors)
-                fprintf(outfile_, "%s", color);
+            std::string left_pad = "▕";
+            std::string right_pad = "▏";
+            std::string label = "";
+
+        protected:
+            /////////////////////////////////////
+            // formatting
+            /////////////////////////////////////
+            inline void _print_color(const char *color)
+            {
+                if (use_colors)
+                    fprintf(outfile_, "%s", color);
         }
 
         inline void _print_bar() {
@@ -319,11 +323,9 @@ namespace cppm {
             outfile_ = fopen(filename,"w");
         }
 
+        // format double nicely with some fixed percision
         template<class T>
-        pm &operator<<(const T &t) {
-            suffix_ << t;
-            return *this;
-        }
+        pm &operator<<(const T &t);
 
         void reset() {
             t_first = std::chrono::system_clock::now();
@@ -711,5 +713,33 @@ namespace cppm {
         else if (i == 5)
             r = vi, g = p, b = q;
     }
-}; // end namespace pm
+
+    // implementation of specialised formatting of float/double
+    // make it a fixed percision if it is float or double
+    template<>
+    pm &pm::operator<<<double>(const double &t) {
+        std::stringstream _stream;
+        _stream << t;
+        auto _str = _stream.str();
+        if (_str.length() > suffix_percision + 3) {  // 3 characters includes e, +-, and as numeric
+            suffix_ << std::scientific << std::setprecision(suffix_percision - 1) << t;  // -1 because this mode includes a number before decimal place
+        } else {
+            suffix_ << _stream.str();
+        }
+        return *this;
+    }
+
+    template<>
+    pm &pm::operator<<<float>(const float &t) {
+        return pm::operator<<<double>(t);
+    }
+
+    template<class T>
+    pm &pm::operator<<(const T &t) {
+        suffix_ << t;
+        return *this;
+    }
+
+
+}; // end namespace cppm
 // #endif
