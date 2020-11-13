@@ -156,7 +156,7 @@ namespace cppm {
         /////////////////////////////////////
         // internal output and house keeping
         /////////////////////////////////////
-        inline void _print_progress(bool last = false) {
+        inline void _print_progress() {
             fprintf(outfile_, "\015"); // clear line
             // label and pct
             std::ostringstream pbar_pct;
@@ -166,10 +166,11 @@ namespace cppm {
                      << std::setfill(' ') << __tmp_pct * 100 << "%";
             std::string pbar_pct_str = pbar_pct.str();
 
-            if (!last) {
-                suffix = suffix_.str();
-                if (suffix.length() > 0)
-                    suffix.insert(0, " ");
+            // always maintain the last non-empty suffix if the new one is empty
+            std::string tmp;
+            tmp = suffix_.str();
+            if (tmp.length() > 0) {
+                suffix = tmp.insert(0, " ");
             }
             if (has_total_it || print_bar) {
                 // percentage
@@ -406,7 +407,7 @@ namespace cppm {
             if (has_total_it)
                 cur_ = total_;
             _compute_total();
-            _print_progress(true);
+            _print_progress();
             fprintf(outfile_, "\n");
             fflush(outfile_);
         }
