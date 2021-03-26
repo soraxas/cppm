@@ -1,5 +1,42 @@
 #pragma once
 
+///////////////////////////////////////////////////////////////////////////////////
+// You need to define CPPM_LIB_IMPL in exactly one of the translation unit before
+// including the header file to avoid linker problem.
+// i.e., put
+//
+// #define CPPM_LIB_IMPL
+// #include cppm.hpp
+//
+// in exactly one of your cpp file.
+// Other file should include cppm.hpp normally, without the #define statement
+///////////////////////////////////////////////////////////////////////////////////
+
+
+namespace cppm {
+
+    extern unsigned int terminal_width;
+    extern FILE *def_outfile;
+
+    extern void flush_stdout(int sig);
+    extern void update_terminal_width(int sig = -1);
+    extern void hsv_to_rgb(float h, float s, float v, int &r, int &g, int &b);
+
+    extern const char *COLOR_RESET;
+    extern const char *COLOR_RED;
+    extern const char *COLOR_BLUE;
+    extern const char *COLOR_LIME;
+
+}
+
+
+//// workaround https://stackoverflow.com/questions/223771/repeated-multiple-definition-errors-from-including-same-header-in-multiple-cpps
+//#ifdef MAINFILE
+//    #define EXTERN
+//#else
+//    #define EXTERN extern
+//#endif
+
 #include <unistd.h>
 #include <chrono>
 #include <ctime>
@@ -21,17 +58,6 @@
 #define UNUSED(x) (void)(x)
 
 namespace cppm {
-    unsigned int terminal_width = 80;
-    FILE *def_outfile = stderr;
-
-    void flush_stdout(int sig);
-    void update_terminal_width(int sig=-1);
-    void hsv_to_rgb(float h, float s, float v, int &r, int &g, int &b);
-
-    const char *COLOR_RESET = "\033[0m\033[32m\033[0m\015";
-    const char *COLOR_RED = "\033[1m\033[31m";  // with bold
-    const char *COLOR_BLUE = "\033[1m\033[34m"; // with bold
-    const char *COLOR_LIME = "\033[32m";
 
     class pm {
         public:
@@ -671,6 +697,67 @@ namespace cppm {
         return range((IntType) 0, end, (IntType) 1);
     }
 
+    #define FIXED_PREC(x) std::fixed << std::setprecision(x)
+    #define SCIEN_PREC(x) std::scientific << std::setprecision(x)
+
+    // implementation of specialised formatting of float/double
+    // make it a fixed percision if it is float or double
+    template<>
+    inline pm &pm::operator<<<double>(const double &t) {
+        if (format_suffix_floating_pt) {
+            double abs_t = abs(t);
+            
+            if (abs_t < 1e-3 || abs_t > 1e3) {
+                // format as x.xxe-08
+                suffix_ << SCIEN_PREC(2) << t;  // -1 because this mode includes a number before decimal place
+            }
+            else {
+                unsigned short num_decimal_place;
+                if (abs_t < 1) {
+                    // format as 0.xxx
+                    num_decimal_place = 3;
+                }
+                else if (abs_t < 100) {
+                    // format as 12.34
+                    num_decimal_place = 2;
+                }
+                else /* if (abs_t < 1000) */ {
+                    // format as 123.4
+                    num_decimal_place = 1;
+                }
+                suffix_ << SCIEN_PREC(num_decimal_place) << t;  // -1 because this mode includes a number before decimal place
+            }
+        } else {
+            suffix_ << t;
+        }
+
+        return *this;
+    }
+
+    template<>
+    inline pm &pm::operator<<<float>(const float &t) {
+        return pm::operator<<<double>(t);
+    }
+
+    template<class T>
+    inline pm &pm::operator<<(const T &t) {
+        suffix_ << t;
+        return *this;
+    }
+
+#ifdef CPPM_LIB_IMPL
+    unsigned int terminal_width = 80;
+    FILE *def_outfile = stderr;
+
+    void flush_stdout(int sig);
+    void update_terminal_width(int sig);
+    void hsv_to_rgb(float h, float s, float v, int &r, int &g, int &b);
+
+    const char *COLOR_RESET = "\033[0m\033[32m\033[0m\015";
+    const char *COLOR_RED = "\033[1m\033[31m";  // with bold
+    const char *COLOR_BLUE = "\033[1m\033[34m"; // with bold
+    const char *COLOR_LIME = "\033[32m";
+
     ///////////////////////////////////////////////////////////////
     // Helpers
     ///////////////////////////////////////////////////////////////
@@ -714,54 +801,9 @@ namespace cppm {
             r = vi, g = p, b = q;
     }
 
-    #define FIXED_PREC(x) std::fixed << std::setprecision(x)
-    #define SCIEN_PREC(x) std::scientific << std::setprecision(x)
- 
-    // implementation of specialised formatting of float/double
-    // make it a fixed percision if it is float or double
-    template<>
-    pm &pm::operator<<<double>(const double &t) {
-        if (format_suffix_floating_pt) {
-            double abs_t = abs(t);
-            
-            if (abs_t < 1e-3 || abs_t > 1e3) {
-                // format as x.xxe-08
-                suffix_ << SCIEN_PREC(2) << t;  // -1 because this mode includes a number before decimal place
-            }
-            else {
-                unsigned short num_decimal_place;
-                if (abs_t < 1) {
-                    // format as 0.xxx
-                    num_decimal_place = 3;
-                }
-                else if (abs_t < 100) {
-                    // format as 12.34
-                    num_decimal_place = 2;
-                }
-                else /* if (abs_t < 1000) */ {
-                    // format as 123.4
-                    num_decimal_place = 1;
-                }
-                suffix_ << SCIEN_PREC(num_decimal_place) << t;  // -1 because this mode includes a number before decimal place
-            }
-        } else {
-            suffix_ << t;
-        }
-
-        return *this;
-    }
-
-    template<>
-    pm &pm::operator<<<float>(const float &t) {
-        return pm::operator<<<double>(t);
-    }
-
-    template<class T>
-    pm &pm::operator<<(const T &t) {
-        suffix_ << t;
-        return *this;
-    }
+#endif
 
 
 }; // end namespace cppm
 // #endif
+
