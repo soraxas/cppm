@@ -315,6 +315,8 @@ namespace cppm {
 
         inline void compute_pbar_size(const int &other_length) {
             bar_width = terminal_width - other_length;
+            if (bar_width < 0)  // something went wrong.
+              bar_width = 40;  // default width.
         }
 
     public:
