@@ -1,34 +1,43 @@
 #pragma once
 
 ///////////////////////////////////////////////////////////////////////////////////
-// You need to define CPPM_LIB_IMPL in exactly one of the translation unit
-// before including the header file to avoid linker problem. i.e., put
+// If you are not using C++17, you need to define CPPM_LIB_IMPL in exactly one
+// of the translation unit before including the header file to avoid linker
+// problem. i.e., put
 //
 // #define CPPM_LIB_IMPL
 // #include cppm.hpp
 //
 // in exactly one of your cpp file.
 // Other file should include cppm.hpp normally, without the #define statement
+//
+// If you are using C++17, the static variables are defined as inline variable
 ///////////////////////////////////////////////////////////////////////////////////
 
 namespace cppm {
 
+#if __cplusplus >= 201703L
+
+inline static unsigned int terminal_width = 80;
+inline static FILE *def_outfile = stderr;
+
+#else // pre c++17
+
+// forward declare in other headers
 extern unsigned int terminal_width;
 extern FILE *def_outfile;
 
-extern void flush_stdout(int sig);
-extern void update_terminal_width(int sig = -1);
-extern void hsv_to_rgb(float h, float s, float v, int &r, int &g, int &b);
+#ifdef CPPM_LIB_IMPL // should only be define in one translational unit
+unsigned int terminal_width = 80;
+FILE *def_outfile = stderr;
+#endif // end CPPM_LIB_IMPL
 
-extern const char *COLOR_RESET;
-extern const char *COLOR_RED;
-extern const char *COLOR_BLUE;
-extern const char *COLOR_LIME;
+#endif // end
 
 } // namespace cppm
 
 //// workaround
-///https://stackoverflow.com/questions/223771/repeated-multiple-definition-errors-from-including-same-header-in-multiple-cpps
+/// https://stackoverflow.com/questions/223771/repeated-multiple-definition-errors-from-including-same-header-in-multiple-cpps
 //#ifdef MAINFILE
 //    #define EXTERN
 //#else
@@ -56,6 +65,14 @@ extern const char *COLOR_LIME;
 #define UNUSED(x) (void)(x)
 
 namespace cppm {
+// helpers and constants
+void flush_stdout(int sig);
+void update_terminal_width(int sig = -1);
+void hsv_to_rgb(float h, float s, float v, int &r, int &g, int &b);
+const char *const COLOR_RESET = "\033[0m\033[32m\033[0m\015";
+const char *const COLOR_RED = "\033[1m\033[31m";  // with bold
+const char *const COLOR_BLUE = "\033[1m\033[34m"; // with bold
+const char *const COLOR_LIME = "\033[32m";
 
 class pm {
 public:
@@ -257,15 +274,15 @@ protected:
   }
 
   inline bool _internal_update() {
-    bool closed_to_finish =
+    bool about_to_finish =
         has_total_it && total_ - cur_ < 2; // will finish loop soon
-    if (is_tty && (cur_ % period == 0 || closed_to_finish)) {
+    if (is_tty && (cur_ % period == 0 || about_to_finish)) {
       auto now = std::chrono::system_clock::now();
       float dt = ((std::chrono::duration<double>)(now - t_old)).count();
       nupdates++;
 
       // do nothing if last refresh time is too recent.
-      if (!closed_to_finish && dt < min_update_time)
+      if (!about_to_finish && dt < min_update_time)
         return false;
 
       __tmp_dt_tot = ((std::chrono::duration<double>)(now - t_first)).count();
@@ -712,37 +729,24 @@ template <class T> inline pm &pm::operator<<(const T &t) {
   return *this;
 }
 
-#ifdef CPPM_LIB_IMPL
-unsigned int terminal_width = 80;
-FILE *def_outfile = stderr;
-
-void flush_stdout(int sig);
-void update_terminal_width(int sig);
-void hsv_to_rgb(float h, float s, float v, int &r, int &g, int &b);
-
-const char *COLOR_RESET = "\033[0m\033[32m\033[0m\015";
-const char *COLOR_RED = "\033[1m\033[31m";  // with bold
-const char *COLOR_BLUE = "\033[1m\033[34m"; // with bold
-const char *COLOR_LIME = "\033[32m";
-
 ///////////////////////////////////////////////////////////////
 // Helpers
 ///////////////////////////////////////////////////////////////
-void flush_stdout(int sig) {
+inline void flush_stdout(int sig) {
   fprintf(def_outfile, "\n");
   fflush(def_outfile);
   signal(sig, SIG_DFL);
   raise(sig);
 }
 
-void update_terminal_width(int sig) {
+inline void update_terminal_width(int sig) {
   UNUSED(sig);
   struct winsize size;
   ioctl(STDOUT_FILENO, TIOCGWINSZ, &size);
   terminal_width = size.ws_col;
 }
 
-void hsv_to_rgb(float h, float s, float v, int &r, int &g, int &b) {
+inline void hsv_to_rgb(float h, float s, float v, int &r, int &g, int &b) {
   if (s < 1e-6) {
     v *= 255., r = v, g = v, b = v;
   }
@@ -754,21 +758,26 @@ void hsv_to_rgb(float h, float s, float v, int &r, int &g, int &b) {
   v *= 255;
   i %= 6;
   int vi = (int)v;
-  if (i == 0)
+  switch (i) {
+  case 0:
     r = vi, g = t, b = p;
-  else if (i == 1)
+    break;
+  case 1:
     r = q, g = vi, b = p;
-  else if (i == 2)
+    break;
+  case 2:
     r = p, g = vi, b = t;
-  else if (i == 3)
+    break;
+  case 3:
     r = p, g = q, b = vi;
-  else if (i == 4)
+    break;
+  case 4:
     r = t, g = p, b = vi;
-  else if (i == 5)
+    break;
+  case 5:
     r = vi, g = p, b = q;
+    break;
+  }
 }
-
-#endif
-
 }; // end namespace cppm
 // #endif
