@@ -14,6 +14,7 @@
 // If you are using C++17, the static variables are defined as inline variable
 ///////////////////////////////////////////////////////////////////////////////////
 
+/*
 namespace cppm {
 
 #if __cplusplus >= 201703L
@@ -35,14 +36,7 @@ FILE *def_outfile = stderr;
 #endif // end
 
 } // namespace cppm
-
-//// workaround
-/// https://stackoverflow.com/questions/223771/repeated-multiple-definition-errors-from-including-same-header-in-multiple-cpps
-//#ifdef MAINFILE
-//    #define EXTERN
-//#else
-//    #define EXTERN extern
-//#endif
+*/
 
 #include <algorithm>
 #include <chrono>
@@ -60,11 +54,27 @@ FILE *def_outfile = stderr;
 #include <vector>
 // for getting terminal size
 #include <sys/ioctl.h> //ioctl() and TIOCGWINSZ
-#include <unistd.h> // for STDOUT_FILENO
+#include <unistd.h>    // for STDOUT_FILENO
 
 #define UNUSED(x) (void)(x)
 
 namespace cppm {
+
+////////////////////////////////////////////////////////////
+// tricks to initialise static variable in header across translational units
+// https://stackoverflow.com/questions/38043442/how-do-inline-variables-work
+template <class Dummy> struct StaticVariables_ {
+  static unsigned int terminal_width;
+  static FILE *def_outfile;
+};
+// set default variables
+template <class Dummy>
+unsigned int StaticVariables_<Dummy>::terminal_width = 80;
+template <class Dummy> FILE *StaticVariables_<Dummy>::def_outfile = stderr;
+
+using StaticVariables = StaticVariables_<void>; // easier naming
+////////////////////////////////////////////////////////////
+
 // helpers and constants
 void flush_stdout(int sig);
 void update_terminal_width(int sig = -1);
@@ -100,7 +110,7 @@ protected:
   bool finished = false;
   std::stringstream suffix_;
   std::string suffix;
-  FILE *outfile_ = def_outfile;
+  FILE *outfile_ = StaticVariables::def_outfile;
 
   // short terminal_width = 80;
   std::vector<const char *> bars = {" ", "▏", "▎", "▍", "▌",
@@ -323,7 +333,7 @@ protected:
   }
 
   inline void compute_pbar_size(const int &other_length) {
-    bar_width = terminal_width - other_length;
+    bar_width = StaticVariables::terminal_width - other_length;
     if (bar_width < 0) // something went wrong.
       bar_width = 40;  // default width.
   }
@@ -350,9 +360,9 @@ public:
   pm(pm &&) = default;
 
   ~pm() {
-    if (outfile_ != def_outfile) {
+    if (outfile_ != StaticVariables::def_outfile) {
       fclose(outfile_);
-      outfile_ = def_outfile;
+      outfile_ = StaticVariables::def_outfile;
     }
   }
 
@@ -374,7 +384,7 @@ public:
     has_total_it = false;
     finished = false;
     label = "";
-    outfile_ = def_outfile;
+    outfile_ = StaticVariables::def_outfile;
     update_terminal_width();
     _internal_update_end();
   }
@@ -733,8 +743,8 @@ template <class T> inline pm &pm::operator<<(const T &t) {
 // Helpers
 ///////////////////////////////////////////////////////////////
 inline void flush_stdout(int sig) {
-  fprintf(def_outfile, "\n");
-  fflush(def_outfile);
+  fprintf(StaticVariables::def_outfile, "\n");
+  fflush(StaticVariables::def_outfile);
   signal(sig, SIG_DFL);
   raise(sig);
 }
@@ -743,7 +753,7 @@ inline void update_terminal_width(int sig) {
   UNUSED(sig);
   struct winsize size;
   ioctl(STDOUT_FILENO, TIOCGWINSZ, &size);
-  terminal_width = size.ws_col;
+  StaticVariables::terminal_width = size.ws_col;
 }
 
 inline void hsv_to_rgb(float h, float s, float v, int &r, int &g, int &b) {
