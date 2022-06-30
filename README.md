@@ -12,11 +12,50 @@ This is useful if you need to run some process and would like to monitor the pro
 
 `cppm` uses syntax upto C++11.
 
+# Quick install
+
+You can use the following in your CMakeLists.txt
+```cmake
+include(FetchContent)
+# ==================================================
+set (EXT_CPPM "ext_cppm")
+	FetchContent_Declare (
+    ${EXT_CPPM}
+
+    PREFIX         ${EXT_CPPM}
+		GIT_REPOSITORY https://github.com/soraxas/cppm
+		GIT_TAG        2e946ee1261b61b955d55b5d405410f34fb8ce4a
+		GIT_SHALLOW    ON
+
+		BUILD_ALWAYS   OFF
+    INSTALL_DIR    ${CMAKE_CURRENT_BINARY_DIR}/ext/${EXT_CPPM}
+
+		CMAKE_CACHE_ARGS
+			-DCMAKE_INSTALL_PREFIX:PATH=<INSTALL_DIR>
+
+	)
+FetchContent_MakeAvailable(${EXT_CPPM})
+# ==================================================
+
+# ......
+# ......
+
+target_link_libraries(${PROJECT_NAME} cppm)
+```
+
 
 # Usage
 
 `cppm` can be used as a monitor without explicit size, of which it will display the speed of the iterations per second.
 
+```c++
+auto pbar = cppm::pm(n);
+for (...) {
+  ...
+  pbar.update();
+}
+pbar.finish();
+```
 
 # Acknowledgement
 

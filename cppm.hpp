@@ -444,12 +444,13 @@ public:
 
   void disable_colors() { color_transition = use_colors = false; }
 
-  void finish() {
+  void finish(bool set_to_total = false) {
     if (finished)
       return;
     finished = true;
-    if (has_total_it)
-      cur_ = total_;
+    if (set_to_total)
+      if (has_total_it)
+        cur_ = total_;
     _compute_total();
     _print_progress();
     fprintf(outfile_, "\n");
