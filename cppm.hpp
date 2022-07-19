@@ -462,11 +462,9 @@ class pm_timer : public pm {
 protected:
   double total_seconds_ = 0.;
 
-  inline void _compute_total() {
-    auto now = std::chrono::system_clock::now();
 
-    double passed_time =
-        ((std::chrono::duration<double>)(now - t_first)).count();
+  inline void _compute_total() {
+    double passed_time = elapsed();
     __tmp_remain_t = total_seconds_ - passed_time;
     __tmp_pct = passed_time / total_seconds_;
   }
@@ -482,6 +480,14 @@ public:
 
   pm_timer(const double seconds) : pm(), total_seconds_(seconds) {
     print_bar = true;
+  }
+
+  double elapsed() const {
+    auto now = std::chrono::system_clock::now();
+
+    double passed_time =
+        ((std::chrono::duration<double>)(now - t_first)).count();
+    return passed_time;
   }
 
   void progress(int curr, int tot) = delete;

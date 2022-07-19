@@ -41,6 +41,7 @@ FetchContent_MakeAvailable(${EXT_CPPM})
 # ......
 
 target_link_libraries(${PROJECT_NAME} cppm)
+target_include_directories(${PROJECT_NAME} PRIVATE $<TARGET_PROPERTY:cppm,INTERFACE_INCLUDE_DIRECTORIES>)
 ```
 
 
