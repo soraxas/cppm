@@ -58,6 +58,14 @@ FILE *def_outfile = stderr;
 
 #define UNUSED(x) (void)(x)
 
+#ifdef CPPM_USE_MUTEX
+#define CPPM_COUNT_T std::atomic<size_t>
+#define CPPM_COUNT_LOAD(var) var.load()
+#else
+#define CPPM_COUNT_T size_t
+#define CPPM_COUNT_LOAD(var) var
+#endif
+
 namespace cppm {
 
 ////////////////////////////////////////////////////////////
@@ -102,7 +110,7 @@ protected:
   std::vector<int> deq_n;
   size_t nupdates = 0;
   size_t total_ = 0;
-  size_t cur_ = 0;
+  CPPM_COUNT_T cur_ = 0;
   size_t period = 1;
   unsigned int smoothing = 50;
   bool has_total_it = false;
@@ -255,7 +263,8 @@ protected:
       pbar_suf << "]";
 
       std::string pbar_suf_str = pbar_suf.str();
-      fprintf(outfile_, "%4ldit %s", cur_, pbar_suf_str.c_str());
+      fprintf(outfile_, "%4ldit %s", CPPM_COUNT_LOAD(cur_),
+              pbar_suf_str.c_str());
       fprintf(outfile_, "%s", COLOR_LIME);
       fprintf(outfile_, "%s", suffix.c_str());
     }
@@ -283,16 +292,42 @@ protected:
     }
   }
 
-  inline bool _internal_update() {
+  inline bool _is_about_to_finish() const {
     bool about_to_finish =
         has_total_it && total_ - cur_ < 2; // will finish loop soon
-    if (is_tty && (cur_ % period == 0 || about_to_finish)) {
-      auto now = std::chrono::system_clock::now();
-      float dt = ((std::chrono::duration<double>)(now - t_old)).count();
-      nupdates++;
+
+    return about_to_finish;
+  }
+
+  inline bool _should_update_display(std::chrono::system_clock::time_point &now,
+                                     float &dt) const {
+    if (cur_ % period == 0) {
+      now = std::chrono::system_clock::now();
+      dt = ((std::chrono::duration<double>)(now - t_old)).count();
 
       // do nothing if last refresh time is too recent.
-      if (!about_to_finish && dt < min_update_time)
+      if (dt >= min_update_time)
+        return true;
+    }
+    return false;
+  }
+
+  inline bool _should_update_display() const {
+    std::chrono::system_clock::time_point now;
+    float dt;
+    return _should_update_display(now, dt);
+  }
+
+  inline bool _internal_update() {
+    if (is_tty) {
+      std::chrono::system_clock::time_point now;
+      float dt;
+
+      bool should_update_display = _should_update_display(now, dt);
+      if (should_update_display)
+        nupdates++;
+
+      if (!should_update_display && !_is_about_to_finish())
         return false;
 
       __tmp_dt_tot = ((std::chrono::duration<double>)(now - t_first)).count();
@@ -364,6 +399,18 @@ public:
       fclose(outfile_);
       outfile_ = StaticVariables::def_outfile;
     }
+    finish();
+  }
+
+  /**
+   * Compute where we should update the display in the next tick
+   *
+   * @param compute_dt if true, compute dt for more accurate (but slightly
+   * computational expensive) prediction.
+   * @return
+   */
+  inline bool willUpdateDisplay() const {
+    return _is_about_to_finish() || _should_update_display();
   }
 
   void setOutFilename(const char *filename) { outfile_ = fopen(filename, "w"); }
@@ -390,21 +437,35 @@ public:
   }
 
   ///////////////////////////////////////////////////////////////
-  virtual void update() {
+  inline void atomic_increment() {
+#ifndef CPPM_USE_MUTEX
+    throw std::runtime_error("CPPM had not define the flag '#define "
+                             "CPPM_COUNT_LOAD' to enable atomic counting.");
+#endif
     /* Called to increment internal counter */
     ++cur_;
+  }
+
+  inline void try_print_progress() {
+    if (finished)
+      return;
     if (_internal_update())
       _print_progress();
     _internal_update_end();
+  }
+
+  virtual void update() {
+    if (finished)
+      return;
+    atomic_increment();
+    try_print_progress();
   }
 
   void progress(int curr, int tot) {
     /* Called directly set current counter and total */
     cur_ = curr, total_ = tot;
     has_total_it = true;
-    if (_internal_update())
-      _print_progress();
-    _internal_update_end();
+    try_print_progress();
   }
 
   ///////////////////////////////////////////////////////////////
@@ -462,7 +523,6 @@ class pm_timer : public pm {
 protected:
   double total_seconds_ = 0.;
 
-
   inline void _compute_total() {
     double passed_time = elapsed();
     __tmp_remain_t = total_seconds_ - passed_time;
@@ -513,7 +573,7 @@ public:
 
   ~IteratorProgressMonitor() {
     // finish bar when iterator is done.
-    finish();
+    //    finish();
   }
 
   struct iterator {
@@ -657,28 +717,33 @@ private:
 ///////////////////////////////////////////////////////////////
 // public interface for accessing pm as a wrapper iterator
 ///////////////////////////////////////////////////////////////
-template <class It> auto iter(const It &first, const It &last) {
+template <class It>
+IteratorProgressMonitor<It> iter(const It &first, const It &last) {
   return IteratorProgressMonitor<It>(first, last);
 }
 
 template <class It>
-auto iter(const It &first, const It &last, const size_t total) {
+IteratorProgressMonitor<It> iter(const It &first, const It &last,
+                                 const size_t total) {
   return IteratorProgressMonitor<It>(first, last, total);
 }
 
 // lvalue container
-template <class Container> auto iter(const Container &C) {
+template <class Container>
+IteratorProgressMonitor<Container> iter(const Container &C) {
   return iter(C.begin(), C.end());
 }
 
 // rvalue container
-template <class Container> auto iter(const Container &&C) {
+template <class Container>
+IteratorProgressMonitorForRvalue<Container> iter(const Container &&C) {
   return IteratorProgressMonitorForRvalue<Container>(std::move(C));
 }
 
 // create an implicit iterator, similar to tqdm.trange
 template <class IntType>
-auto range(IntType start, IntType end, IntType step = 1) {
+IteratorProgressMonitor<IntType> range(IntType start, IntType end,
+                                       IntType step = 1) {
   RangeContainer<IntType> rc(start, end, step);
   IntType differences = (end - start);
   size_t it_len = differences / step;
@@ -696,7 +761,7 @@ auto range(IntType start, IntType end, IntType step = 1) {
   return iter(rc.begin(), rc.end(), it_len);
 }
 
-template <class IntType> auto range(IntType end) {
+template <class IntType> IteratorProgressMonitor<IntType> range(IntType end) {
   return range((IntType)0, end, (IntType)1);
 }
 
@@ -705,7 +770,7 @@ template <class IntType> auto range(IntType end) {
 
 // implementation of specialised formatting of float/double
 // make it a fixed percision if it is float or double
-template <> inline pm &pm::operator<<<double>(const double &t) {
+template <> inline pm &pm::operator<< <double>(const double &t) {
   if (format_suffix_floating_pt) {
     double abs_t = abs(t);
 
@@ -737,8 +802,8 @@ template <> inline pm &pm::operator<<<double>(const double &t) {
   return *this;
 }
 
-template <> inline pm &pm::operator<<<float>(const float &t) {
-  return pm::operator<<<double>(t);
+template <> inline pm &pm::operator<< <float>(const float &t) {
+  return pm::operator<< <double>(t);
 }
 
 template <class T> inline pm &pm::operator<<(const T &t) {
