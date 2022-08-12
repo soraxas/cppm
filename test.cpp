@@ -1,7 +1,5 @@
 #include "cppm.hpp"
 
-
-
 std::vector<int> get_vector(int size)
 {
     std::vector<int> A(size);
@@ -11,8 +9,8 @@ std::vector<int> get_vector(int size)
     return A;
 }
 
-int main() {
-
+int main()
+{
     int N = 20000;
 
     std::cout << "Progress monitor without total:" << std::endl;
@@ -23,32 +21,32 @@ int main() {
     {
         usleep(.1);
         bar1.update();
-        // include extra info 
+        // include extra info
         bar1 << "loss=" << i;
     }
     bar1.finish();
-    
+
     std::cout << "Overhead of loop only:" << std::endl;
     cppm::pm bar2;
     for (int i = 0; i < N; i++)
     {
         bar2.update();
-        // include extra info 
+        // include extra info
         bar2 << "loss=" << i;
     }
     bar2.finish();
-    
+
     std::cout << "Progress monitor with given total:" << std::endl;
     cppm::pm bar3(N);
     for (int i = 0; i < N; i++)
     {
         usleep(.1);
         bar3.update();
-        // include extra info 
+        // include extra info
         bar3 << "loss=" << i;
     }
     bar3.finish();
-    
+
     std::cout << "CPPM as a timer with an estimated time-to-finish:" << std::endl;
     cppm::pm_timer bar4(N * 500 * 1e-6);  // estimated time to finish
     for (int i = 0; i < N; i++)
@@ -57,37 +55,40 @@ int main() {
         bar4.update();
     }
     bar4.finish();
-    
+
     std::cout << "CPPM with wrapping some iterator (lvalue):" << std::endl;
     auto list = get_vector(50000000);
     auto bar5 = cppm::iter(list);
-    for (auto &&t: bar5)
+    for (auto &&t : bar5)
     {
         // bar5.update();  // SHOULD NOT USE UPDATE
         bar5 << t;
     }
     bar5.finish();
-    
+
     std::cout << "CPPM with wrapping some iterator (rvalue):" << std::endl;
     auto bar6 = cppm::iter(get_vector(5000000));
-    for (auto &&t: bar6)
+    for (auto &&t : bar6)
     {
         bar6 << t;
     }
     bar6.finish();
-    
+
     std::cout << "CPPM with easy range (only end):" << std::endl;
     for (auto &&t : cppm::range(100))
-    {}
-    
+    {
+    }
+
     std::cout << "CPPM with easy range (start & end):" << std::endl;
     for (auto &&t : cppm::range(10, 100))
-    {}
-    
+    {
+    }
+
     std::cout << "CPPM with easy range (start & end & step):" << std::endl;
     for (auto &&t : cppm::range(10, 100, 5))
-    {}
-    
+    {
+    }
+
     std::cout << "CPPM with easy range (negative step):" << std::endl;
     auto bar7 = cppm::range(1.4e2, -100.2, -5.5);
     for (auto &&t : bar7)
@@ -103,7 +104,8 @@ int main() {
     bar.reset();
     bar.set_theme_basic();
     bar.set_total(N);
-    for(int i = 0; i < N; i++) {
+    for (int i = 0; i < N; i++)
+    {
         // bar.progress(i, N);
         bar.update();
         usleep(100);
@@ -114,7 +116,8 @@ int main() {
     std::cout << "Braille:" << std::endl;
     bar.reset();
     bar.set_theme_braille();
-    for(int i = 0; i < N; i++) {
+    for (int i = 0; i < N; i++)
+    {
         bar.progress(i, N);
         usleep(300);
     }
@@ -123,7 +126,8 @@ int main() {
     std::cout << "Line:" << std::endl;
     bar.reset();
     bar.set_theme_line();
-    for(int i = 0; i < N; i++) {
+    for (int i = 0; i < N; i++)
+    {
         bar.progress(i, N);
         usleep(300);
     }
@@ -132,7 +136,8 @@ int main() {
     std::cout << "Circles:" << std::endl;
     bar.reset();
     bar.set_theme_circle();
-    for(int i = 0; i < N; i++) {
+    for (int i = 0; i < N; i++)
+    {
         bar.progress(i, N);
         usleep(300);
     }
@@ -142,7 +147,8 @@ int main() {
     std::cout << "Vertical bars:" << std::endl;
     bar.reset();
     bar.set_theme_vertical();
-    for(int i = 0; i < N; i++) {
+    for (int i = 0; i < N; i++)
+    {
         bar.progress(i, N);
         usleep(300);
     }
