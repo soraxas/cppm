@@ -505,7 +505,7 @@ namespace cppm
         {
             if (finished)
                 return;
-            atomic_increment();
+            ++cur_;
             try_print_progress();
         }
 
