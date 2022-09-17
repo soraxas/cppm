@@ -418,7 +418,7 @@ namespace cppm
                    flush_stdout);  // flush outfile_ when program is exiting
             signal(SIGWINCH,
                    update_terminal_width);  // update width when terminal is resizing
-            show_console_cursor(false);  // default to not show cursor
+            show_console_cursor(false);     // default to not show cursor
             _print_progress();
         }
 
@@ -835,34 +835,34 @@ namespace cppm
     // public interface for accessing pm as a wrapper iterator
     ///////////////////////////////////////////////////////////////
     template <class It>
-    IteratorProgressMonitor<It> iter(const It &first, const It &last)
+    auto iter(const It &first, const It &last)
     {
         return IteratorProgressMonitor<It>(first, last);
     }
 
     template <class It>
-    IteratorProgressMonitor<It> iter(const It &first, const It &last, const size_t total)
+    auto iter(const It &first, const It &last, const size_t total)
     {
         return IteratorProgressMonitor<It>(first, last, total);
     }
 
     // lvalue container
     template <class Container>
-    IteratorProgressMonitor<Container> iter(const Container &C)
+    auto iter(const Container &C)
     {
         return iter(C.begin(), C.end());
     }
 
     // rvalue container
     template <class Container>
-    IteratorProgressMonitorForRvalue<Container> iter(const Container &&C)
+    auto iter(const Container &&C)
     {
         return IteratorProgressMonitorForRvalue<Container>(std::move(C));
     }
 
     // create an implicit iterator, similar to tqdm.trange
     template <class IntType>
-    IteratorProgressMonitor<IntType> range(IntType start, IntType end, IntType step = 1)
+    auto range(IntType start, IntType end, IntType step = 1)
     {
         RangeContainer<IntType> rc(start, end, step);
         IntType differences = (end - start);
@@ -885,7 +885,7 @@ namespace cppm
     }
 
     template <class IntType>
-    IteratorProgressMonitor<IntType> range(IntType end)
+    auto range(IntType end)
     {
         return range((IntType)0, end, (IntType)1);
     }
