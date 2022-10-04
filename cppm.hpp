@@ -56,7 +56,7 @@
 
 #define UNUSED(x) (void)(x)
 #ifndef CPPM_MIN_PBAR_WIDTH
-#define CPPM_MIN_PBAR_WIDTH 20
+#define CPPM_MIN_PBAR_WIDTH 5
 #endif
 
 #ifdef CPPM_USE_MUTEX
@@ -121,7 +121,7 @@ namespace cppm
         unsigned int smoothing = 50;
         bool has_total_it = false;
         bool print_bar = false;
-        bool finished = false;
+        bool finished_ = false;
         std::stringstream suffix_;
         std::string suffix;
         FILE *outfile_ = StaticVariables::def_outfile;
@@ -488,7 +488,7 @@ namespace cppm
             total_ = 0;
             cur_ = 0;
             has_total_it = false;
-            finished = false;
+            finished_ = false;
             label = "";
             outfile_ = StaticVariables::def_outfile;
             update_terminal_width();
@@ -508,7 +508,7 @@ namespace cppm
 
         inline void print_progress()
         {
-            if (finished)
+            if (finished_)
                 return;
             _print_progress();
             _internal_update_end();
@@ -516,7 +516,7 @@ namespace cppm
 
         inline void try_print_progress()
         {
-            if (finished)
+            if (finished_)
                 return;
             if (_internal_update())
                 _print_progress();
@@ -525,7 +525,7 @@ namespace cppm
 
         virtual void update()
         {
-            if (finished)
+            if (finished_)
                 return;
             ++cur_;
             try_print_progress();
@@ -596,9 +596,9 @@ namespace cppm
 
         void finish(bool set_to_total = false)
         {
-            if (finished)
+            if (finished())
                 return;
-            finished = true;
+            finished_ = true;
             if (set_to_total)
                 if (has_total_it)
                     cur_ = total_;
@@ -607,6 +607,11 @@ namespace cppm
             fprintf(outfile_, "\n");
             fflush(outfile_);
         }
+
+        inline bool finished() const
+        {
+            return finished_;
+        }
     };
 
     class pm_timer : public pm
@@ -614,14 +619,14 @@ namespace cppm
     protected:
         fdtype total_seconds_ = 0.;
 
-        inline void _compute_total()
+        inline void _compute_total() override
         {
             fdtype passed_time = elapsed();
             __tmp_remain_t = total_seconds_ - passed_time;
             __tmp_pct = passed_time / total_seconds_;
         }
 
-        virtual inline void _sstream_progress_text(std::ostringstream &oss)
+        virtual inline void _sstream_progress_text(std::ostringstream &oss) override
         {
             oss << cur_ << "it";
         }
