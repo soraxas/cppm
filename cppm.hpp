@@ -429,7 +429,9 @@ namespace cppm
             has_total_it = true;
         }
 
+#ifndef CPPM_USE_MUTEX
         pm(pm &&) = default;
+#endif
 
         ~pm()
         {
@@ -451,6 +453,11 @@ namespace cppm
         inline bool willUpdateDisplay() const
         {
             return _is_about_to_finish() || _should_update_display();
+        }
+
+        inline size_t n()
+        {
+            return cur_;
         }
 
         void setOutFilename(const char *filename)
@@ -490,6 +497,14 @@ namespace cppm
 #endif
             /* Called to increment internal counter */
             ++cur_;
+        }
+
+        inline void print_progress()
+        {
+            if (finished)
+                return;
+            _print_progress();
+            _internal_update_end();
         }
 
         inline void try_print_progress()
@@ -556,10 +571,15 @@ namespace cppm
             label = label_.append(" ");
         }
 
-        void set_total(const int total)
+        virtual void set_total(const int total)
         {
             total_ = total;
             has_total_it = true;
+        }
+
+        virtual void set_total(const double total)
+        {
+            set_total(static_cast<int>(total));
         }
 
         void disable_colors()
@@ -601,6 +621,16 @@ namespace cppm
 
     public:
         pm_timer() = delete;
+
+        void set_total(const int total) override
+        {
+            set_total(static_cast<double>(total));
+        }
+
+        void set_total(const double total) override
+        {
+            total_seconds_ = total;
+        }
 
         pm_timer(const int seconds) : pm_timer((double)seconds)
         {
