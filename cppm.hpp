@@ -55,6 +55,9 @@
 #include <unistd.h>  // for STDOUT_FILENO
 
 #define UNUSED(x) (void)(x)
+#ifndef CPPM_MIN_PBAR_WIDTH
+#define CPPM_MIN_PBAR_WIDTH 20
+#endif
 
 #ifdef CPPM_USE_MUTEX
 #define CPPM_COUNT_T std::atomic<size_t>
@@ -402,8 +405,8 @@ namespace cppm
         inline void compute_pbar_size(const int &other_length)
         {
             bar_width = StaticVariables::terminal_width - other_length;
-            if (bar_width < 0)   // something went wrong.
-                bar_width = 40;  // default width.
+            if (bar_width < 0)                    // the available width is too small.
+                bar_width = CPPM_MIN_PBAR_WIDTH;  // default width.
         }
 
     public:
@@ -1039,6 +1042,7 @@ namespace cppm
 };  // end namespace cppm
 
 #undef UNUSED
+#undef CPPM_MIN_PBAR_WIDTH
 #undef CPPM_USE_MUTEX
 #undef CPPM_COUNT_T
 #undef CPPM_COUNT_LOAD
