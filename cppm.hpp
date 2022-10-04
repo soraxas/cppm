@@ -1,43 +1,40 @@
+/* *
+ *
+ *   █████╗░██████╗░██████╗░███╗░░░███╗
+ *  ██╔══██╗██╔══██╗██╔══██╗████╗░████║
+ *  ██║░░╚═╝██████╔╝██████╔╝██╔████╔██║
+ *  ██║░░██╗██╔═══╝░██╔═══╝░██║╚██╔╝██║
+ *  ╚█████╔╝██║░░░░░██║░░░░░██║░╚═╝░██║
+ *   ╚════╝░╚═╝░░░░░╚═╝░░░░░╚═╝░░░░░╚═╝
+ *    C++ Program Progress Monitor
+ *    https://github.com/soraxas/cppm
+ *
+ * Licensed under the MIT License <http://opensource.org/licenses/MIT>.
+ * SPDX-License-Identifier: MIT
+ *
+ * MIT License
+ *
+ * Copyright (c) 2020-2022 Tin Lai (@soraxas) <oscar@tinyiu.com>
+ *
+ * Permission is hereby  granted, free of charge, to any  person obtaining a copy
+ * of this software and associated  documentation files (the "Software"), to deal
+ * in the Software  without restriction, including without  limitation the rights
+ * to  use, copy,  modify, merge,  publish, distribute,  sublicense, and/or  sell
+ * copies  of  the Software,  and  to  permit persons  to  whom  the Software  is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE  IS PROVIDED "AS  IS", WITHOUT WARRANTY  OF ANY KIND,  EXPRESS OR
+ * IMPLIED,  INCLUDING BUT  NOT  LIMITED TO  THE  WARRANTIES OF  MERCHANTABILITY,
+ * FITNESS FOR  A PARTICULAR PURPOSE AND  NONINFRINGEMENT. IN NO EVENT  SHALL THE
+ * AUTHORS  OR COPYRIGHT  HOLDERS  BE  LIABLE FOR  ANY  CLAIM,  DAMAGES OR  OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF  CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE  OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ * */
 #pragma once
-
-///////////////////////////////////////////////////////////////////////////////////
-// If you are not using C++17, you need to define CPPM_LIB_IMPL in exactly one
-// of the translation unit before including the header file to avoid linker
-// problem. i.e., put
-//
-// #define CPPM_LIB_IMPL
-// #include cppm.hpp
-//
-// in exactly one of your cpp file.
-// Other file should include cppm.hpp normally, without the #define statement
-//
-// If you are using C++17, the static variables are defined as inline variable
-///////////////////////////////////////////////////////////////////////////////////
-
-/*
-namespace cppm {
-
-#if __cplusplus >= 201703L
-
-inline static unsigned int terminal_width = 80;
-inline static FILE *def_outfile = stderr;
-
-#else // pre c++17
-
-// forward declare in other headers
-extern unsigned int terminal_width;
-extern FILE *def_outfile;
-
-#ifdef CPPM_LIB_IMPL // should only be define in one translational unit
-unsigned int terminal_width = 80;
-FILE *def_outfile = stderr;
-#endif // end CPPM_LIB_IMPL
-
-#endif // end
-
-} // namespace cppm
-*/
-
 #include <algorithm>
 #include <chrono>
 #include <cstdlib>
@@ -69,6 +66,7 @@ FILE *def_outfile = stderr;
 
 namespace cppm
 {
+    using fdtype = float;
 
     ////////////////////////////////////////////////////////////
     // tricks to initialise static variable in header across translational units
@@ -111,7 +109,7 @@ namespace cppm
             std::chrono::system_clock::now();
         std::chrono::time_point<std::chrono::system_clock> t_old = std::chrono::system_clock::now();
         int n_old = 0;
-        std::vector<double> deq_t;
+        std::vector<fdtype> deq_t;
         std::vector<int> deq_n;
         size_t nupdates = 0;
         size_t total_ = 0;
@@ -137,10 +135,10 @@ namespace cppm
         int bar_width = 40;
 
         /////////////////////////////////////
-        double __tmp_pct = 0.;
-        double __tmp_avgrate = 0.;
-        double __tmp_remain_t = 0.;
-        double __tmp_dt_tot = 0.;
+        fdtype __tmp_pct = 0.;
+        fdtype __tmp_avgrate = 0.;
+        fdtype __tmp_remain_t = 0.;
+        fdtype __tmp_dt_tot = 0.;
         /////////////////////////////////////
 
         std::string left_pad = "▕";
@@ -159,8 +157,8 @@ namespace cppm
 
         inline void _print_bar()
         {
-            double pct = __tmp_pct > 1. ? 1. : __tmp_pct;  // clamp
-            double fills = (pct * bar_width);
+            fdtype pct = __tmp_pct > 1. ? 1. : __tmp_pct;  // clamp
+            fdtype fills = (pct * bar_width);
             int ifills = fills;
 
             if (use_colors)
@@ -185,13 +183,13 @@ namespace cppm
             fprintf(outfile_, "%s", right_pad.c_str());
         }
 
-        inline void _format_speed(std::ostringstream &oss, const double &avgrate)
+        inline void _format_speed(std::ostringstream &oss, const fdtype &avgrate)
         {
             if (!enable_speed_stats)
                 return;
 
             const char *unit = "Hz";
-            double div = 1.;
+            fdtype div = 1.;
             if (avgrate > 1e6)
                 unit = "MHz", div = 1.0e6;
             else if (avgrate > 1e3)
@@ -305,7 +303,7 @@ namespace cppm
             if (has_total_it)
             {
                 __tmp_remain_t = (total_ - cur_) / __tmp_avgrate;
-                __tmp_pct = ((double)cur_) / ((double)total_);
+                __tmp_pct = ((fdtype)cur_) / ((fdtype)total_);
                 // // last small chunk of percentage.
                 // if ((total_ - cur_) <= period)
                 // {
@@ -330,7 +328,7 @@ namespace cppm
             if (cur_ % period == 0)
             {
                 now = std::chrono::system_clock::now();
-                dt = ((std::chrono::duration<double>)(now - t_old)).count();
+                dt = ((std::chrono::duration<fdtype>)(now - t_old)).count();
 
                 // do nothing if last refresh time is too recent.
                 if (dt >= min_update_time)
@@ -360,7 +358,7 @@ namespace cppm
                 if (!should_update_display && !_is_about_to_finish())
                     return false;
 
-                __tmp_dt_tot = ((std::chrono::duration<double>)(now - t_first)).count();
+                __tmp_dt_tot = ((std::chrono::duration<fdtype>)(now - t_first)).count();
                 int dn = cur_ - n_old;
                 n_old = cur_;
                 t_old = now;
@@ -377,13 +375,13 @@ namespace cppm
                     __tmp_avgrate = deq_n[0] / deq_t[0];
                     for (unsigned int i = 1; i < deq_t.size(); i++)
                     {
-                        double r = 1.0 * deq_n[i] / deq_t[i];
+                        fdtype r = 1.0 * deq_n[i] / deq_t[i];
                         __tmp_avgrate = alpha_ema * r + (1.0 - alpha_ema) * __tmp_avgrate;
                     }
                 }
                 else
                 {
-                    double dtsum = std::accumulate(deq_t.begin(), deq_t.end(), 0.);
+                    fdtype dtsum = std::accumulate(deq_t.begin(), deq_t.end(), 0.);
                     int dnsum = std::accumulate(deq_n.begin(), deq_n.end(), 0.);
                     __tmp_avgrate = dnsum / dtsum;
                 }
@@ -419,7 +417,8 @@ namespace cppm
             signal(SIGINT,
                    flush_stdout);  // flush outfile_ when program is exiting
             signal(SIGWINCH,
-                   update_terminal_width);  // flush outfile_ when program is exiting
+                   update_terminal_width);  // update width when terminal is resizing
+            show_console_cursor(false);     // default to not show cursor
             _print_progress();
         }
 
@@ -465,7 +464,12 @@ namespace cppm
             outfile_ = fopen(filename, "w");
         }
 
-        // format double nicely with some fixed percision
+        inline void show_console_cursor(bool const show)
+        {
+            fprintf(outfile_, show ? "\033[?25h" : "\033[?25l");
+        }
+
+        // format fdtype nicely with some fixed percision
         template <class T>
         pm &operator<<(const T &t);
 
@@ -520,7 +524,7 @@ namespace cppm
         {
             if (finished)
                 return;
-            atomic_increment();
+            ++cur_;
             try_print_progress();
         }
 
@@ -605,11 +609,11 @@ namespace cppm
     class pm_timer : public pm
     {
     protected:
-        double total_seconds_ = 0.;
+        fdtype total_seconds_ = 0.;
 
         inline void _compute_total()
         {
-            double passed_time = elapsed();
+            fdtype passed_time = elapsed();
             __tmp_remain_t = total_seconds_ - passed_time;
             __tmp_pct = passed_time / total_seconds_;
         }
@@ -641,11 +645,11 @@ namespace cppm
             print_bar = true;
         }
 
-        double elapsed() const
+        fdtype elapsed() const
         {
             auto now = std::chrono::system_clock::now();
 
-            double passed_time = ((std::chrono::duration<double>)(now - t_first)).count();
+            fdtype passed_time = ((std::chrono::duration<fdtype>)(now - t_first)).count();
             return passed_time;
         }
 
@@ -861,34 +865,34 @@ namespace cppm
     // public interface for accessing pm as a wrapper iterator
     ///////////////////////////////////////////////////////////////
     template <class It>
-    IteratorProgressMonitor<It> iter(const It &first, const It &last)
+    auto iter(const It &first, const It &last)
     {
         return IteratorProgressMonitor<It>(first, last);
     }
 
     template <class It>
-    IteratorProgressMonitor<It> iter(const It &first, const It &last, const size_t total)
+    auto iter(const It &first, const It &last, const size_t total)
     {
         return IteratorProgressMonitor<It>(first, last, total);
     }
 
     // lvalue container
     template <class Container>
-    IteratorProgressMonitor<Container> iter(const Container &C)
+    auto iter(const Container &C)
     {
         return iter(C.begin(), C.end());
     }
 
     // rvalue container
     template <class Container>
-    IteratorProgressMonitorForRvalue<Container> iter(const Container &&C)
+    auto iter(const Container &&C)
     {
         return IteratorProgressMonitorForRvalue<Container>(std::move(C));
     }
 
     // create an implicit iterator, similar to tqdm.trange
     template <class IntType>
-    IteratorProgressMonitor<IntType> range(IntType start, IntType end, IntType step = 1)
+    auto range(IntType start, IntType end, IntType step = 1)
     {
         RangeContainer<IntType> rc(start, end, step);
         IntType differences = (end - start);
@@ -911,7 +915,7 @@ namespace cppm
     }
 
     template <class IntType>
-    IteratorProgressMonitor<IntType> range(IntType end)
+    auto range(IntType end)
     {
         return range((IntType)0, end, (IntType)1);
     }
@@ -919,7 +923,7 @@ namespace cppm
 #define FIXED_PREC(x) std::fixed << std::setprecision(x)
 #define SCIEN_PREC(x) std::scientific << std::setprecision(x)
 
-    // implementation of specialised formatting of float/double
+    // implementation of specialised formatting of float/fdtype
     // make it a fixed percision if it is float or double
     template <>
     inline pm &pm::operator<< <double>(const double &t)
